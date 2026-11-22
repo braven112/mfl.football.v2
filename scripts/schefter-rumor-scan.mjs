@@ -724,11 +724,11 @@ async function loadTeams() {
       // punitive rebrand is recent AND memorable.
       aliases: Array.isArray(t.aliases) ? t.aliases : [],
       history: Array.isArray(t.history) ? t.history : [],
-      // AFL-only fields; undefined for TheLeague. `tier` drives the hotseat
+      // AFL-only fields; undefined for TheLeague. `competition` drives the hotseat
       // scope floor ({ kind: 'tier' }) — dropping it here silently downgrades
       // every Relegation-watch post to league-wide framing.
       conference: t.conference,
-      tier: t.tier,
+      competition: t.competition,
     });
   }
   return map;
@@ -1663,8 +1663,8 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       // configured floor — league-wide for TheLeague's 4-team divisions,
       // tier (12-team pool) for the AFL.
       safe.scope =
-        topicPolicy.scopeFloor === 'tier' && team?.tier
-          ? { kind: 'tier', tier: team.tier }
+        topicPolicy.scopeFloor === 'tier' && team?.competition
+          ? { kind: 'tier', tier: team.competition }
           : { kind: 'league-wide' };
       return safe;
     }

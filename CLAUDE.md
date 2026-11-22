@@ -407,9 +407,9 @@ being replaced (docs/plans/league-chat-and-persona.md, Phase 7).
 **Share the standard views; a league's own competition stays its own.** The
 owner's model (Sep 2026), standings first: a league shows THREE standings
 tabs, by default Division / Playoffs / All-Play, and may replace any one with
-something of its own (the AFL's Tiers; one day Archie's skins game). The
+something of its own (the AFL's Premier League / D-League competition; one day Archie's skins game). The
 standard views are shared and configured per league as data (columns,
-seeding, labels). A league's own competition — tiers, relegation, skins —
+seeding, labels). A league's own competition — promotion and relegation, skins —
 is one-of-one: build it as that league's component in a slot the shared page
 renders, and never generalise its rules into the shared profile "in case"
 another league wants it. Another client may be SHOWN it for ideas; theirs is

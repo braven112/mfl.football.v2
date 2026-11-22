@@ -81,7 +81,7 @@ const cookiePreference = getAFLPreference(Astro.cookies);
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
   if (teamData) {
-    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.competition);
   }
 }
 

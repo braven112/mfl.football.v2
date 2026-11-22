@@ -130,7 +130,7 @@ export interface StandingsTableProps {
   /**
    * How many of this tier's teams move up (top) and down (bottom) at season's
    * end, for a league that declares its own movement
-   * (`tierCompetition.movement`). Absent, the AFL's fixed two-tier bands apply.
+   * (`competitionSettings.movement`). Absent, the AFL's fixed two-tier bands apply.
    */
   tierMovement?: { promote: number; relegate: number };
   /** Throwback Week: franchiseId → TODAY's team name, printed as a second line

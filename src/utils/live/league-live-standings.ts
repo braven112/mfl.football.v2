@@ -38,11 +38,11 @@ import { leagueFeedPath, loadLeagueData } from '../league-data';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../live-standings';
 import { parsePriorGameCounts } from '../mfl-schedule-pairings';
 import {
-  AFL_TIERS_SLUG,
+  AFL_COMPETITION_SLUG,
   buildAllPlayBase,
-  buildTierSections,
-  getTierMembership,
-  resolveTierCutoffWeek,
+  buildCompetitionSections,
+  getCompetitionMembership,
+  resolveCompetitionCutoffWeek,
 } from './afl-live-standings';
 import { decorateStandings, markWeekCounted, parseStandingsFeedRows } from './standings';
 
@@ -54,7 +54,7 @@ export interface LeagueLiveStandings {
 interface ConfigTeam {
   franchiseId: string;
   division?: string;
-  tier?: string;
+  competition?: string;
 }
 
 interface LeagueConfigShape {
@@ -63,7 +63,7 @@ interface LeagueConfigShape {
   divisions?: Array<string | { id?: string; name?: string }>;
   /** The AFL: each conference lists its divisions by name. */
   conferences?: Array<{ name: string; code?: string; divisions: string[] }>;
-  tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> };
+  competitionSettings?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> };
 }
 
 const asArray = <T>(v: unknown): T[] => (Array.isArray(v) ? v : v ? [v as T] : []);
@@ -221,7 +221,7 @@ export async function readLiveStandings(input: {
   const seeding = (league as { standingsSeeding?: { kind?: string; divisionLeaders: number; runnersUp: number; wildCards: number } })
     .standingsSeeding;
   const isMad = seeding?.kind === 'mad';
-  const hasTiers = slug === AFL_TIERS_SLUG;
+  const hasTiers = slug === AFL_COMPETITION_SLUG;
   try {
     const path = (file: string) => leagueFeedPath(league.dataPath, year, file);
     const [committed, schedule, weeklyResults, leagueFeed] = await Promise.all([
@@ -269,18 +269,18 @@ export async function readLiveStandings(input: {
     let victoryPoints: LiveVictoryPointRules | undefined;
 
     if (hasTiers) {
-      const cutoffWeek = resolveTierCutoffWeek(config.tierCompetition, year) ?? 17;
+      const cutoffWeek = resolveCompetitionCutoffWeek(config.competitionSettings, year) ?? 17;
       allPlay = buildAllPlayBase({
         feedRows,
         weeklyResults: (weeklyResults ?? null) as Parameters<typeof buildAllPlayBase>[0]['weeklyResults'],
         boardWeek: week,
         cutoffWeek,
       });
-      const membership = getTierMembership(year);
+      const membership = getCompetitionMembership(year);
       const teams = new Map((config.teams ?? []).map((t) => [t.franchiseId, t]));
-      const tiers = buildTierSections({
+      const tiers = buildCompetitionSections({
         feedRows,
-        teamTier: (id) => membership?.[id] ?? teams.get(id)?.tier,
+        teamTier: (id) => membership?.[id] ?? teams.get(id)?.competition,
         allPlay,
         leagueSlug: slug,
       });

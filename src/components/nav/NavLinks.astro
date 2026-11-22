@@ -32,7 +32,7 @@ import { resolveLeaguePath, getLeaguePrefix } from '../../utils/nav-utils';
 import { spriteUrlFor } from '../../utils/sprite-url';
 const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeaguePhase } from '../../utils/league-phase';
-import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import { getCompetitionLogo, getCompetitionLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-competition-logo';
 import ThemeImage from '../shared/ThemeImage.astro';
 
 interface Props extends NavLinksProps {
@@ -64,7 +64,7 @@ const viewerIsPlatformAdmin = isPlatformAdmin(getAuthUser(Astro.request));
 
 const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
 
-// Tier marks come from the shared afl-tier-logo helpers (self-hosted, and the
+// Tier marks come from the shared afl-competition-logo helpers (self-hosted, and the
 // only source with hand-authored dark variants). The nav previously pointed at
 // a single remote light-mode SVG, which rendered a dark-on-dark logo in dark
 // mode — SSR can't know the resolved theme, so both variants render and CSS
@@ -72,13 +72,13 @@ const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
 const AFL_TIER_LINKS = {
   [PREMIER_LEAGUE]: {
     label: PREMIER_LEAGUE,
-    iconUrl: getTierLogo(PREMIER_LEAGUE),
-    iconDarkUrl: getTierLogoDark(PREMIER_LEAGUE),
+    iconUrl: getCompetitionLogo(PREMIER_LEAGUE),
+    iconDarkUrl: getCompetitionLogoDark(PREMIER_LEAGUE),
   },
   [D_LEAGUE]: {
     label: D_LEAGUE,
-    iconUrl: getTierLogo(D_LEAGUE),
-    iconDarkUrl: getTierLogoDark(D_LEAGUE),
+    iconUrl: getCompetitionLogo(D_LEAGUE),
+    iconDarkUrl: getCompetitionLogoDark(D_LEAGUE),
   },
 } as const;
 
@@ -139,7 +139,7 @@ function getAflCompetitionOverride(
   fid?: string,
 ): { label: string; iconUrl: string; iconDarkUrl: string } | null {
   if (lg !== 'afl' || link.id !== 'premier-league') return null;
-  const tier = aflPreference?.competitionId || (fid ? getAFLTeamData(fid)?.tier : null);
+  const tier = aflPreference?.competitionId || (fid ? getAFLTeamData(fid)?.competition : null);
   return AFL_TIER_LINKS[tier as keyof typeof AFL_TIER_LINKS] ?? AFL_TIER_LINKS[PREMIER_LEAGUE];
 }
 

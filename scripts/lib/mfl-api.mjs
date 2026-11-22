@@ -8,7 +8,7 @@
  *
  * `fetchExport` consolidates three near-identical "build an MFL export URL
  * and fetch it" helpers (scripts/compute-afl-awards.mjs,
- * scripts/compute-afl-tier-movement.mjs,
+ * scripts/compute-afl-competition-movement.mjs,
  * scripts/backfill-afl-championship-history.mjs) that differed in whether
  * they retried on 429, whether they slept before every attempt or not at
  * all, and their User-Agent string. Each caller passes options that

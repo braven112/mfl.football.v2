@@ -29,7 +29,7 @@ Branch: `claude/plan-afl-version-mjyIK`.
 - **Salary data** (`src/data/afl-fantasy/`): `mfl-player-salaries-2007..2025.json`, `mfl-salary-averages-2007..2025.json`. (Useful as historical record even though AFL has no salary cap going forward.)
 - **CSS skin**: `src/assets/css/src/afl_main.scss`, `_variables-afl.scss`; `build-styles.mjs` already loops both leagues.
 - **Asset pipeline**: `sync-afl-assets.mjs`, `sync-afl-asset-urls.mjs`, `watch-afl-assets.mjs`. Assets in `public/assets/afl/{banners,icons,group-me}`.
-- **All-play computation library**: `src/utils/standings.ts` (602 lines). `calculateAllPlayFromWeekly(results, cutoffWeek)` plus `getDivisionStandings`, `getConferenceStandings`, `getAllPlayStandings`, `getTierAllPlayStandings`. Tiebreaker chain: all-play → PF → PWR → VP → PA. `PREMIER_LEAGUE_CUTOFF_WEEK = 17` is hardcoded in the standings page (move to config).
+- **All-play computation library**: `src/utils/standings.ts` (602 lines). `calculateAllPlayFromWeekly(results, cutoffWeek)` plus `getDivisionStandings`, `getConferenceStandings`, `getAllPlayStandings`, `getCompetitionAllPlayStandings`. Tiebreaker chain: all-play → PF → PWR → VP → PA. `PREMIER_LEAGUE_CUTOFF_WEEK = 17` is hardcoded in the standings page (move to config).
 - **Standings page shipped** (`src/pages/afl-fantasy/standings.astro`, 925 lines). Three views via `?view=`:
   - `division` — standings within each division, defending-champion badges (hardcoded by-year map).
   - `league` (Playoff) — AL + NL conference standings (top 4 advance) + an **NIT / Secondary Playoffs** table for seeds 5-12 ranked by Power Rank.
@@ -115,7 +115,7 @@ Build a small `<LeagueSwitcher>` component that uses `getOtherLeagueFranchiseId`
 `src/utils/standings.ts` already implements `calculateAllPlayFromWeekly`, the tier-grouped standings, and the cutoff-week mechanic. Remaining cleanups (small):
 
 - Add vitest coverage. Right now this math underpins the side game's outcome and has no tests — high-value, low-effort.
-- Move `PREMIER_LEAGUE_CUTOFF_WEEK = 17` out of the standings page constant and into `data/afl-fantasy/afl.config.json` (under e.g. `tierCompetition.cutoffWeek`).
+- Move `PREMIER_LEAGUE_CUTOFF_WEEK = 17` out of the standings page constant and into `data/afl-fantasy/afl.config.json` (under e.g. `competitionSettings.cutoffWeek`).
 - Optional: precompute and cache `src/data/afl-fantasy/all-play-<year>.json` via a workflow so SSR doesn't recompute on every request. Skip if perf is fine.
 
 ---
@@ -213,7 +213,7 @@ This is a real second competition layered on top of H2H. Each week, every team's
 - This is **not** a playoff in the football sense — there are no extra games. It's a final standings cut. The shipped UI calls it "Promotion/Relegation playoff" which is a stretch; consider renaming to "Promotion/Relegation cutoff" or "Premier League bubble" in copy.
 
 **Already shipped on the standings page (`?view=all_play`):**
-- Premier League and D-League side-by-side tier standings (`getTierAllPlayStandings`).
+- Premier League and D-League side-by-side tier standings (`getCompetitionAllPlayStandings`).
 - All-play computation via `calculateAllPlayFromWeekly` with cutoff week.
 - The 4-team bubble cutoff sub-table.
 
@@ -222,7 +222,7 @@ This is a real second competition layered on top of H2H. Each week, every team's
 1. **Tests** for the all-play math (§2.7).
 2. **Move cutoff week to config** (§2.7).
 3. **"If season ended today" projections** that account for unplayed weeks (current implementation is point-in-time).
-4. **Historical tier movement timeline** per franchise — `src/data/afl-fantasy/tier-history.json`. New small page or section on franchise detail.
+4. **Historical tier movement timeline** per franchise — `src/data/afl-fantasy/competition-history.json`. New small page or section on franchise detail.
 5. **Optional dedicated `/afl-fantasy/tiers` page** that's promotion/relegation-first (today the standings page is playoff-first with all-play as a tab). Decide whether to surface this as its own URL for permalinks/social shares, or keep everything on `standings`.
 6. **Power-rankings annotation** — footnote each ranked team with their all-play record so subjective rankings sit next to the objective race.
 

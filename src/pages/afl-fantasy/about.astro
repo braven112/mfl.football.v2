@@ -14,8 +14,8 @@ const champEntries = Object.values(champHistoryGlob)[0]?.default?.championships 
 // data-driven rather than hand-edited each year.
 const totalTeams = aflConfig.teams?.length ?? 0;
 const conferences = aflConfig.conferences ?? [];
-const tiersList = aflConfig.tierCompetition?.tiers ?? ['Premier League', 'D-League'];
-const cutoffWeek = aflConfig.tierCompetition?.cutoffWeek ?? 17;
+const tiersList = aflConfig.competitionSettings?.names ?? ['Premier League', 'D-League'];
+const cutoffWeek = aflConfig.competitionSettings?.cutoffWeek ?? 17;
 const championships = champEntries.slice().sort((a, b) => b.year - a.year);
 const mostRecentChamp = championships[0];
 const yearsRecorded = championships.length;

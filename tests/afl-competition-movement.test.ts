@@ -5,14 +5,14 @@ import {
   PREMIER,
   DLEAGUE,
   computeAllPlayThroughCutoff,
-  rankWithinTier,
+  rankWithinCompetition,
   splitMembership,
   flattenMembership,
-  computeTierMovement,
+  computeCompetitionMovement,
   byAllPlay,
   CONSTITUTION_MOVEMENT_RULES,
-} from '../scripts/lib/afl-tier-standings.mjs';
-import { resolveTierCutoffWeek } from '../src/utils/all-play.mjs';
+} from '../scripts/lib/afl-competition-standings.mjs';
+import { resolveCompetitionCutoffWeek } from '../src/utils/all-play.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
 const readJson = (rel: string) =>
@@ -23,7 +23,7 @@ const readJson = (rel: string) =>
 const allPlayFrom = (pcts: Record<string, number>) =>
   new Map(Object.entries(pcts).map(([id, pct]) => [id, { pct, pf: pct * 1000 }]));
 
-describe('afl-tier-standings: all-play from weekly results', () => {
+describe('afl-competition-standings: all-play from weekly results', () => {
   it('counts all-play wins/losses/ties against every other team each week', () => {
     const weekly = {
       weeks: [
@@ -54,14 +54,14 @@ describe('afl-tier-standings: all-play from weekly results', () => {
   });
 });
 
-describe('afl-tier-standings: ranking + membership helpers', () => {
+describe('afl-competition-standings: ranking + membership helpers', () => {
   it('ranks by all-play pct desc, then PF, then id', () => {
     const ap = new Map([
       ['x', { pct: 0.5, pf: 100 }],
       ['y', { pct: 0.5, pf: 200 }], // higher PF wins the tie
       ['z', { pct: 0.9, pf: 1 }],
     ]);
-    expect(rankWithinTier(['x', 'y', 'z'], ap)).toEqual(['z', 'y', 'x']);
+    expect(rankWithinCompetition(['x', 'y', 'z'], ap)).toEqual(['z', 'y', 'x']);
   });
 
   it('splits and flattens membership round-trip', () => {
@@ -73,7 +73,7 @@ describe('afl-tier-standings: ranking + membership helpers', () => {
   });
 });
 
-describe('afl-tier-standings: movement (full constitution rule)', () => {
+describe('afl-competition-standings: movement (full constitution rule)', () => {
   // Premier P1..P12, D-League D1..D12. pct chosen so within-tier rank is the
   // natural numeric order, EXCEPT the swing pool, where D-League's 3rd/4th
   // outrank Premier's 9th/10th and cross over.
@@ -90,7 +90,7 @@ describe('afl-tier-standings: movement (full constitution rule)', () => {
   };
   const allPlay = allPlayFrom(pcts);
   const membership = { [PREMIER]: premier, [DLEAGUE]: dleague };
-  const m = computeTierMovement(membership, allPlay);
+  const m = computeCompetitionMovement(membership, allPlay);
 
   it('names the #1 of each tier as champion', () => {
     expect(m.champions['premier-league']).toBe('P1');
@@ -123,14 +123,14 @@ describe('afl-tier-standings: movement (full constitution rule)', () => {
   });
 });
 
-describe('afl-tier-standings: pre-2024 eight-team era falls back to simple up/down', () => {
+describe('afl-competition-standings: pre-2024 eight-team era falls back to simple up/down', () => {
   it('skips the swing playoff when tiers are too small for the configured ranks', () => {
     const premier = Array.from({ length: 8 }, (_, i) => `P${i + 1}`);
     const dleague = Array.from({ length: 8 }, (_, i) => `D${i + 1}`);
     const pcts: Record<string, number> = {};
     premier.forEach((id, i) => (pcts[id] = 0.9 - i * 0.05));
     dleague.forEach((id, i) => (pcts[id] = 0.5 - i * 0.05));
-    const m = computeTierMovement(
+    const m = computeCompetitionMovement(
       { [PREMIER]: premier, [DLEAGUE]: dleague },
       allPlayFrom(pcts)
     );
@@ -144,16 +144,16 @@ describe('afl-tier-standings: pre-2024 eight-team era falls back to simple up/do
   });
 });
 
-describe('afl-tier-standings: real 2025 data reproduces the recorded champions', () => {
+describe('afl-competition-standings: real 2025 data reproduces the recorded champions', () => {
   it('ranks the 2025 cutoff-week all-play within tiers to Premier 0015 / D-League 0017', () => {
     const cfg = readJson('data/afl-fantasy/afl.config.json');
-    const history = readJson('data/afl-fantasy/tier-history.json');
+    const history = readJson('data/afl-fantasy/competition-history.json');
     const weekly = readJson('data/afl-fantasy/mfl-feeds/2025/weekly-results.json');
-    const cutoff = cfg.tierCompetition.cutoffWeek;
+    const cutoff = cfg.competitionSettings.cutoffWeek;
     const membership = history.seasons['2025'].membership;
 
     const allPlay = computeAllPlayThroughCutoff(weekly, cutoff);
-    const m = computeTierMovement(membership, allPlay, history.movementRules);
+    const m = computeCompetitionMovement(membership, allPlay, history.movementRules);
 
     expect(m.champions['premier-league']).toBe('0015'); // The Mariachi Ninjas
     expect(m.champions['dleague-champion']).toBe('0017'); // Titsburgh Feelers
@@ -173,7 +173,7 @@ describe('afl-tier-standings: real 2025 data reproduces the recorded champions',
  * Table" heading, so both halves are pinned here — the cutoff resolves to 16,
  * and the table it produces names the franchise the awards ledger credits.
  */
-describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
+describe('afl-competition-standings: the 2017 AFL Cup ends at week 16', () => {
   const cfg = readJson('data/afl-fantasy/afl.config.json');
   const weekly = readJson('data/afl-fantasy/mfl-feeds/2017/weekly-results.json');
   const awards = readJson('data/afl-fantasy/awards-history.json');
@@ -188,10 +188,10 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
   };
 
   it('resolves 2017 to week 16 and every other season to the default', () => {
-    expect(resolveTierCutoffWeek(cfg.tierCompetition, 2017)).toBe(16);
+    expect(resolveCompetitionCutoffWeek(cfg.competitionSettings, 2017)).toBe(16);
     for (const year of [2016, 2018, 2025, 2026]) {
-      expect(resolveTierCutoffWeek(cfg.tierCompetition, year)).toBe(
-        cfg.tierCompetition.cutoffWeek
+      expect(resolveCompetitionCutoffWeek(cfg.competitionSettings, year)).toBe(
+        cfg.competitionSettings.cutoffWeek
       );
     }
   });
@@ -201,9 +201,9 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
     // yields an EMPTY all-play table, i.e. champions computed from no games.
     for (const bad of [null, '', 0, -1, 1.5, 'sixteen', NaN, {}]) {
       expect(
-        resolveTierCutoffWeek({ cutoffWeek: 17, cutoffWeekByYear: { 2017: bad } }, 2017)
+        resolveCompetitionCutoffWeek({ cutoffWeek: 17, cutoffWeekByYear: { 2017: bad } }, 2017)
       ).toBe(17);
-      expect(resolveTierCutoffWeek({ cutoffWeek: bad }, 2017)).toBe(17);
+      expect(resolveCompetitionCutoffWeek({ cutoffWeek: bad }, 2017)).toBe(17);
     }
   });
 
@@ -212,10 +212,10 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
     // is wrong, and wrong in a way that rewrites real history. Bracket 1
     // resolves in week 16 in 2018, 2019 AND 2020 too, but those seasons ran
     // their all-play through 17: recompute 2020 at week 16 and the D-League
-    // champion comes out 0013 where tier-history.json records 0015. Since
-    // compute-afl-tier-movement.mjs writes champions back, applying that rule
+    // champion comes out 0013 where competition-history.json records 0015. Since
+    // compute-afl-competition-movement.mjs writes champions back, applying that rule
     // would COMMIT the flip. 2017's week 16 is a recorded fact about 2017.
-    const th = readJson('data/afl-fantasy/tier-history.json');
+    const th = readJson('data/afl-fantasy/competition-history.json');
     const weekly2020 = readJson('data/afl-fantasy/mfl-feeds/2020/weekly-results.json');
     const champAt = (cutoff: number, tier: string) => {
       const rec = computeAllPlayThroughCutoff(weekly2020, cutoff);
@@ -226,7 +226,7 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
     };
     expect(champAt(17, DLEAGUE)).toBe(th.seasons['2020'].champions['dleague-champion']);
     expect(champAt(16, DLEAGUE)).not.toBe(th.seasons['2020'].champions['dleague-champion']);
-    expect(resolveTierCutoffWeek(cfg.tierCompetition, 2020)).toBe(17);
+    expect(resolveCompetitionCutoffWeek(cfg.competitionSettings, 2020)).toBe(17);
   });
 
   it('crowns Smokane FC at week 16 — and Fullybaked at 17, which is the bug', () => {
@@ -237,12 +237,12 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
   it('credits the awards ledger to the week-16 winner', () => {
     const season = awards.seasons.find((s: { year: number }) => s.year === 2017);
     expect(season.awards['afl-cup'].franchiseId).toBe(
-      rank(resolveTierCutoffWeek(cfg.tierCompetition, 2017))[0]
+      rank(resolveCompetitionCutoffWeek(cfg.competitionSettings, 2017))[0]
     );
   });
 
   it('promotes the same top 12 either way — the 2018 Premier League roster', () => {
-    const history = readJson('data/afl-fantasy/tier-history.json');
+    const history = readJson('data/afl-fantasy/competition-history.json');
     const premier2018 = Object.entries(history.seasons['2018'].membership)
       .filter(([, tier]) => tier === PREMIER)
       .map(([id]) => id)
@@ -253,7 +253,7 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
   });
 });
 
-describe('afl-tier-standings: rule constant', () => {
+describe('afl-competition-standings: rule constant', () => {
   it('encodes the 12-team constitution rule', () => {
     expect(CONSTITUTION_MOVEMENT_RULES.autoPromote).toBe(2);
     expect(CONSTITUTION_MOVEMENT_RULES.autoRelegate).toBe(2);

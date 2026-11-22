@@ -22,16 +22,16 @@ import { formatRecord, type BoardTeam, type GroupRow } from './standings-board';
 export const PREMIER_LEAGUE_NAME = 'Premier League';
 export const D_LEAGUE_NAME = 'D-League';
 
-export interface TierMovement {
+export interface CompetitionMovement {
   promote: number;
   relegate: number;
 }
 
-export interface TierBoardOptions {
+export interface CompetitionBoardOptions {
   /** The tier's name, as the tier record spells it. */
-  tier: string;
+  competition: string;
   /** Declared movement for this tier (custom leagues); undefined for the AFL's own rules. */
-  movement?: TierMovement;
+  movement?: CompetitionMovement;
   /** Combined table only: ranks at or above this line were promoted. */
   promotionCutoff?: number;
   /** The league whose payout table prices each rank. */
@@ -39,10 +39,10 @@ export interface TierBoardOptions {
 }
 
 /** Prize label per rank (index 0 = rank 1) from the league's payout table. */
-export function tierPrizes(leagueSlug: string, tier: string): string[] {
+export function competitionPrizes(leagueSlug: string, tier: string): string[] {
   const prizes: string[] = [];
   for (const prize of getLeaguePayouts(leagueSlug)?.prizes ?? []) {
-    if (prize.source.kind !== 'tier-rank' || prize.source.tier !== tier) continue;
+    if (prize.source.kind !== 'competition-rank' || prize.source.competition !== tier) continue;
     prizes[prize.source.rank - 1] = `$${prize.amount}`;
   }
   return prizes;
@@ -55,8 +55,8 @@ type Zone = { zone: NonNullable<GroupRow['zone']>; label: string };
  * Exported for the live board's Standings tab (`utils/live/afl-live-standings.ts`),
  * which re-ranks a tier live and must move a team into a zone with its rank.
  */
-export function tierZoneFor(rank: number, count: number, opts: TierBoardOptions): Zone | null {
-  const { movement, tier, promotionCutoff } = opts;
+export function competitionZoneFor(rank: number, count: number, opts: CompetitionBoardOptions): Zone | null {
+  const { movement, competition: tier, promotionCutoff } = opts;
   if (movement) {
     if (movement.promote > 0 && rank <= movement.promote) return { zone: 'up', label: 'Moves up' };
     if (movement.relegate > 0 && rank > count - movement.relegate) return { zone: 'down', label: 'Moves down' };
@@ -77,13 +77,13 @@ export function tierZoneFor(rank: number, count: number, opts: TierBoardOptions)
 }
 
 /** Medals on the top three of the top tier only; a promotion tier's top rows are zoned instead. */
-function medals(opts: TierBoardOptions): number {
+function medals(opts: CompetitionBoardOptions): number {
   if (opts.movement) return opts.movement.promote === 0 ? 3 : 0;
-  return opts.tier === PREMIER_LEAGUE_NAME ? 3 : 0;
+  return opts.competition === PREMIER_LEAGUE_NAME ? 3 : 0;
 }
 
-export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): GroupRow[] {
-  const prizes = tierPrizes(opts.leagueSlug, opts.tier);
+export function buildCompetitionRows(teams: BoardTeam[], opts: CompetitionBoardOptions): GroupRow[] {
+  const prizes = competitionPrizes(opts.leagueSlug, opts.competition);
   // A medal tier medals every paid rank (the AFL pays four), not just three.
   const paid = prizes.findIndex((p) => !p);
   const paidCount = paid === -1 ? prizes.length : paid;
@@ -93,11 +93,11 @@ export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): Group
     const rank = i + 1;
     // A medal tier's paid ranks are their own band, "In the money".
     const zone: Zone | null =
-      tierZoneFor(rank, teams.length, opts) ?? (medalCount && prizes[i] ? { zone: 'money', label: 'In the money' } : null);
+      competitionZoneFor(rank, teams.length, opts) ?? (medalCount && prizes[i] ? { zone: 'money', label: 'In the money' } : null);
     // A zone's label goes above its first row only.
     const startsZone = zone && zone.label !== previousZone;
     previousZone = zone?.label ?? null;
-    const arrow = zone?.zone === 'up' ? 'up' : zone?.zone === 'down' || zone?.zone === 'danger' ? (opts.tier === D_LEAGUE_NAME ? 'up' : 'down') : undefined;
+    const arrow = zone?.zone === 'up' ? 'up' : zone?.zone === 'down' || zone?.zone === 'danger' ? (opts.competition === D_LEAGUE_NAME ? 'up' : 'down') : undefined;
     const ap = team.allPlay;
     return {
       team,

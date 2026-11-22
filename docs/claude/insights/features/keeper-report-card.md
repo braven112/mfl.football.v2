@@ -55,7 +55,7 @@ review:
   CURRENT tier makeup and drifts from historical cycles at every
   promotion/relegation cut (8 of 24 franchises differed between 2025 and
   the current makeup). Year-correct tier chips come from
-  `getTierForYear` (`src/utils/afl-tier.ts`, backed by tier-history.json).
+  `getCompetitionForYear` (`src/utils/afl-competition.ts`, backed by competition-history.json).
 - History era entries without a `conference` field fall back to the
   franchise's CURRENT conference (`entry.conference ?? team.conference`).
   No keeper-era franchise has switched AL/NL yet, but if one ever does,

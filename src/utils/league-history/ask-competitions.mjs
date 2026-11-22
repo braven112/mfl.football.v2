@@ -13,9 +13,9 @@
  * a file that already records it, never from the prompt:
  *
  * - which seasons were all-play, and what the combined table was called:
- *   the league config's `tierCompetition` (`firstSeason`, `combinedTableName`,
- *   and the per-season cutoff week, `resolveTierCutoffWeek`);
- * - who was in which tier each split season: `tier-history.json`;
+ *   the league config's `competitionSettings` (`firstSeason`, `combinedTableName`,
+ *   and the per-season cutoff week, `resolveCompetitionCutoffWeek`);
+ * - who was in which tier each split season: `competition-history.json`;
  * - who won: `awards-history.json` (the award slugs below), which is also
  *   where the AFL Cup's knockout winners live;
  * - the records: each season's `weekly-results.json`, through the same
@@ -27,7 +27,7 @@
  * (records follow the owner, not the franchise slot).
  */
 
-import { accumulateAllPlay, resolveTierCutoffWeek } from '../all-play.mjs';
+import { accumulateAllPlay, resolveCompetitionCutoffWeek } from '../all-play.mjs';
 
 export const COMPETITION_UNITS = ['competitionSeasons', 'competitionOwners', 'competitionTitles'];
 
@@ -115,7 +115,7 @@ export const COMPETITION_SCOPES = ['all', 'Premier League', 'D-League', 'AFL Cup
 const r2 = (n) => Math.round(n * 100) / 100;
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
-/** Better first: all-play % desc, then PF desc (the constitution's tiebreaker), then id. Same as afl-tier-standings.mjs byAllPlay. */
+/** Better first: all-play % desc, then PF desc (the constitution's tiebreaker), then id. Same as afl-competition-standings.mjs byAllPlay. */
 const byAllPlay = (rec) => (a, b) => {
   const ra = rec.get(a);
   const rb = rec.get(b);
@@ -128,26 +128,26 @@ const byAllPlay = (rec) => (a, b) => {
  * @param {any} data
  */
 export function hasCompetitions(data) {
-  return Number.isInteger(data?.tierCompetition?.firstSeason) && !!data?.tierHistory?.seasons;
+  return Number.isInteger(data?.competitionSettings?.firstSeason) && !!data?.competitionHistory?.seasons;
 }
 
 /**
  * Build every competition unit's rows once per dataset.
  *
  * @param {object} p ask-query.mjs's prepared dataset (owner attribution, latest year)
- * @param {{ tierCompetition: any, tierHistory: any, awards: any, weekly: Record<string, any> }} data
+ * @param {{ competitionSettings: any, competitionHistory: any, awards: any, weekly: Record<string, any> }} data
  * @param {{ year: number | null, week: number | null, inProgress: boolean }} asOf
  */
 export function prepareCompetitions(p, data, asOf) {
-  const { tierCompetition, tierHistory, awards, weekly } = data;
-  const first = tierCompetition.firstSeason;
-  const combinedName = tierCompetition.combinedTableName || 'Combined table';
+  const { competitionSettings, competitionHistory, awards, weekly } = data;
+  const first = competitionSettings.firstSeason;
+  const combinedName = competitionSettings.combinedTableName || 'Combined table';
   const ownerOf = (y, f) => p.ix.entity(p.ix.entityOf(y, f));
   const teamName = (y, f) => p.ix.team(y, f)?.n ?? f;
   const seasonDone = new Map(p.ix.ds.seasons.map((s) => [s.y, !!s.done]));
 
   const awardsByYear = new Map((awards?.seasons ?? []).map((s) => [Number(s.year), s.awards ?? {}]));
-  const membershipOf = (y) => tierHistory.seasons?.[String(y)]?.membership ?? null;
+  const membershipOf = (y) => competitionHistory.seasons?.[String(y)]?.membership ?? null;
 
   const seasons = [];
   const years = Object.keys(weekly)
@@ -155,7 +155,7 @@ export function prepareCompetitions(p, data, asOf) {
     .filter((y) => y >= first)
     .sort((a, b) => a - b);
   for (const y of years) {
-    let cutoff = resolveTierCutoffWeek(tierCompetition, y);
+    let cutoff = resolveCompetitionCutoffWeek(competitionSettings, y);
     // The season being played counts only its final weeks, like every other unit.
     if (asOf.inProgress && y === asOf.year) cutoff = Math.min(cutoff, asOf.week ?? 0);
     const rec = accumulateAllPlay(weekly[y], cutoff);
@@ -319,22 +319,22 @@ export function competitionOwnerRows(pc, latestHoldings, scope, inYears) {
  * when each table ran and who won each title. Names only, no numbers, so every
  * stat still has to come from a query.
  */
-export function describeCompetitions(pc, tierCompetition) {
+export function describeCompetitions(pc, competitionSettings) {
   const seasons = pc.competitionSeasons;
   if (!seasons.length && !pc.competitionTitles.length) return '';
   const years = (comp) => [...new Set(seasons.filter((s) => s.competition === comp).map((s) => s.year))];
   const span = (ys) => (ys.length ? (ys.length === 1 ? `${ys[0]}` : `${ys[0]}-${ys.at(-1)}`) : '');
-  const combined = tierCompetition.combinedTableName || 'Combined table';
+  const combined = competitionSettings.combinedTableName || 'Combined table';
   const combinedYears = years(combined);
   const premierYears = years('Premier League');
   // How many of the combined table went up: the next season's Premier League, same owners.
   const seedSize = (y) => seasons.filter((s) => s.year === y && s.nextTier === 'Premier League').length;
   const knockout = pc.competitionTitles.filter((t) => t.format === 'knockout');
-  const cutoffs = Object.entries(tierCompetition.cutoffWeekByYear ?? {})
+  const cutoffs = Object.entries(competitionSettings.cutoffWeekByYear ?? {})
     .map(([y, w]) => `${y} ended at Week ${w}`)
     .join('; ');
   const lines = [
-    `This league runs an all-play side competition next to its head-to-head season: every week each team plays every other team, so a week is worth one all-play win for each team outscored. It runs Weeks 1-${tierCompetition.cutoffWeek ?? 17}${cutoffs ? ` (${cutoffs})` : ''}. It is this league's own competition, nothing to do with soccer or any other league.`,
+    `This league runs an all-play side competition next to its head-to-head season: every week each team plays every other team, so a week is worth one all-play win for each team outscored. It runs Weeks 1-${competitionSettings.cutoffWeek ?? 17}${cutoffs ? ` (${cutoffs})` : ''}. It is this league's own competition, nothing to do with soccer or any other league.`,
     knockout.length || combinedYears.length
       ? `${combined}: ${knockout.length ? `a knockout in ${knockout.map((t) => t.year).join(' and ')} (only its winners are on record, no games)` : ''}${knockout.length && combinedYears.length ? ', then ' : ''}${combinedYears.length ? `one combined all-play table of every team in ${span(combinedYears)}` : ''}. ${combinedYears.length ? `${span(combinedYears)} was the last ${combined} and the first all-play season; its top ${seedSize(combinedYears.at(-1))} entered the first Premier League and the rest started in the D-League.` : ''}`
       : '',

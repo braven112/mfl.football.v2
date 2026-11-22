@@ -2,16 +2,16 @@
  * All-play accumulation — the ONE implementation of the AFL/TheLeague all-play
  * record calc, shared by the live standings page (via src/utils/standings.ts,
  * which wraps this with the app's types) and the node tier-movement scripts
- * (scripts/lib/afl-tier-standings.mjs). Plain ESM with JSDoc types so both a
+ * (scripts/lib/afl-competition-standings.mjs). Plain ESM with JSDoc types so both a
  * Vite-bundled TS module and a plain-`node` .mjs script can import it — the
  * same cross-boundary pattern scripts/schefter-scan.mjs already uses for
  * src/config/leagues-data.mjs.
  *
  * All-play: each week, every team is scored win/loss/tie against ALL other
  * teams that week. Gated to a cutoff week so the AFL tier "side competition"
- * uses regular-season results only (afl.config.json#tierCompetition.cutoffWeek).
+ * uses regular-season results only (afl.config.json#competitionSettings.cutoffWeek).
  *
- * The cutoff is per-season, not a constant — see resolveTierCutoffWeek below.
+ * The cutoff is per-season, not a constant — see resolveCompetitionCutoffWeek below.
  *
  * @typedef {Object} AllPlayRecord
  * @property {number} wins
@@ -24,7 +24,7 @@
 import { allPlayWeek } from './game-results.mjs';
 
 /** Fallback cutoff for any season without its own entry. */
-export const DEFAULT_TIER_CUTOFF_WEEK = 17;
+export const DEFAULT_COMPETITION_CUTOFF_WEEK = 17;
 
 /**
  * The week a season's all-play competition ENDED, inclusive.
@@ -37,9 +37,9 @@ export const DEFAULT_TIER_CUTOFF_WEEK = 17;
  * rule looks right and is wrong: bracket 1 resolves in week 16 in 2018, 2019
  * AND 2020 too, yet those seasons demonstrably ran their all-play through
  * week 17 — recompute 2020 at week 16 and the D-League champion comes out
- * 0013 where tier-history.json records 0015. Applying the title-game rule
+ * 0013 where competition-history.json records 0015. Applying the title-game rule
  * across the board flips a recorded champion, and
- * compute-afl-tier-movement.mjs writes champions back, so the flip would be
+ * compute-afl-competition-movement.mjs writes champions back, so the flip would be
  * committed. Only add a year here with evidence for that specific year.
  *
  * 2017's evidence: the commissioner checked the season's payout records and
@@ -50,20 +50,20 @@ export const DEFAULT_TIER_CUTOFF_WEEK = 17;
  * League roster), which is why the original set-match verification passed
  * while the order was wrong.
  *
- * @param {{cutoffWeek?: number, cutoffWeekByYear?: Record<string, number>}|undefined} tierCompetition
- *   The league config's `tierCompetition` block.
+ * @param {{cutoffWeek?: number, cutoffWeekByYear?: Record<string, number>}|undefined} competitionSettings
+ *   The league config's `competitionSettings` block.
  * @param {number|string} year
  * @returns {number} inclusive cutoff week
  */
-export function resolveTierCutoffWeek(tierCompetition, year) {
+export function resolveCompetitionCutoffWeek(competitionSettings, year) {
   // A malformed entry must fall back, never pass through: Number(null) and
   // Number('') are both 0, which is "finite" but yields an EMPTY all-play
   // table — champions computed from zero games, silently.
   const usable = (v) => Number.isInteger(Number(v)) && Number(v) > 0;
-  const perYear = tierCompetition?.cutoffWeekByYear?.[String(year)];
+  const perYear = competitionSettings?.cutoffWeekByYear?.[String(year)];
   if (usable(perYear)) return Number(perYear);
-  const fallback = tierCompetition?.cutoffWeek;
-  return usable(fallback) ? Number(fallback) : DEFAULT_TIER_CUTOFF_WEEK;
+  const fallback = competitionSettings?.cutoffWeek;
+  return usable(fallback) ? Number(fallback) : DEFAULT_COMPETITION_CUTOFF_WEEK;
 }
 
 /**

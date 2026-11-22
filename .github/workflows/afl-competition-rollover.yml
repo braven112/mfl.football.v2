@@ -1,8 +1,8 @@
-name: AFL Tier Rollover
+name: AFL Competition Rollover
 
 # Recomputes the AFL all-play tier (Premier League / D-League) champions for the
 # latest completed season and rolls promotion/relegation forward into next
-# season's makeup (data/afl-fantasy/tier-history.json), then refreshes the
+# season's makeup (data/afl-fantasy/competition-history.json), then refreshes the
 # trophy-wall tier champions in data/afl-fantasy/awards-history.json.
 #
 # Idempotent: the meaningful change lands once a season's week-17 (cutoff)
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: afl-tier-rollover
+  group: afl-competition-rollover
   cancel-in-progress: true
 
 permissions:
@@ -40,7 +40,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Compute tier champions + roll makeup forward
-        run: node ./scripts/compute-afl-tier-movement.mjs
+        run: node ./scripts/compute-afl-competition-movement.mjs
 
       - name: Refresh trophy-wall tier champions
         run: node ./scripts/compute-afl-awards.mjs --offline
@@ -48,7 +48,7 @@ jobs:
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'data/afl-fantasy/tier-history.json data/afl-fantasy/awards-history.json'
+          add-paths: 'data/afl-fantasy/competition-history.json data/afl-fantasy/awards-history.json'
           commit-message: 'chore(afl): roll tier makeup forward + refresh tier champions'
           no-changes-message: 'No tier rollover changes to commit.'
           git-user-name: 'AFL Tier Bot'

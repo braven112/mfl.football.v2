@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateAllPlayFromWeekly,
-  getTierAllPlayStandings,
+  getCompetitionAllPlayStandings,
   type WeeklyResultsData,
 } from '../src/utils/standings';
 import type { StandingsFranchise } from '../src/types/standings';
@@ -143,7 +143,7 @@ describe('calculateAllPlayFromWeekly', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getTierAllPlayStandings
+// getCompetitionAllPlayStandings
 // ---------------------------------------------------------------------------
 
 const aflConfigFixture = {
@@ -156,10 +156,10 @@ const aflConfigFixture = {
   ],
   divisionToConference: { North: '00', South: '00', East: '01', West: '01' },
   teams: [
-    { franchiseId: '0001', name: 'A1', division: 'North', tier: 'Premier League' },
-    { franchiseId: '0002', name: 'A2', division: 'North', tier: 'Premier League' },
-    { franchiseId: '0003', name: 'B1', division: 'South', tier: 'D-League' },
-    { franchiseId: '0004', name: 'B2', division: 'South', tier: 'D-League' },
+    { franchiseId: '0001', name: 'A1', division: 'North', competition: 'Premier League' },
+    { franchiseId: '0002', name: 'A2', division: 'North', competition: 'Premier League' },
+    { franchiseId: '0003', name: 'B1', division: 'South', competition: 'D-League' },
+    { franchiseId: '0004', name: 'B2', division: 'South', competition: 'D-League' },
   ],
 };
 
@@ -195,7 +195,7 @@ function makeFranchise(id: string, allPlayPct: string, pf = '1500'): StandingsFr
   };
 }
 
-describe('getTierAllPlayStandings', () => {
+describe('getCompetitionAllPlayStandings', () => {
   it('groups teams by tier and returns Premier League first', () => {
     const franchises = [
       makeFranchise('0001', '0.700'),
@@ -204,11 +204,11 @@ describe('getTierAllPlayStandings', () => {
       makeFranchise('0004', '0.400'),
     ];
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture);
 
     expect(result).toHaveLength(2);
-    expect(result[0].tier).toBe('Premier League');
-    expect(result[1].tier).toBe('D-League');
+    expect(result[0].competition).toBe('Premier League');
+    expect(result[1].competition).toBe('D-League');
     expect(result[0].teams.map(t => t.id)).toEqual(['0001', '0002']);
     expect(result[1].teams.map(t => t.id)).toEqual(['0003', '0004']);
   });
@@ -221,7 +221,7 @@ describe('getTierAllPlayStandings', () => {
       makeFranchise('0004', '0.600'),
     ];
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture);
 
     expect(result[0].teams.map(t => t.id)).toEqual(['0002', '0001']);
     expect(result[1].teams.map(t => t.id)).toEqual(['0004', '0003']);
@@ -233,7 +233,7 @@ describe('getTierAllPlayStandings', () => {
       makeFranchise('0002', '0.500', '1700'),
     ];
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture);
     expect(result[0].teams[0].id).toBe('0002');
     expect(result[0].teams[1].id).toBe('0001');
   });
@@ -250,7 +250,7 @@ describe('getTierAllPlayStandings', () => {
       ['0002', { wins: 3, losses: 7, ties: 0, pf: 1400, pct: 0.3 }],
     ]);
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture, calculated);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture, calculated);
 
     // After override, 0001 should rank higher
     expect(result[0].teams.map(t => t.id)).toEqual(['0001', '0002']);
@@ -258,9 +258,9 @@ describe('getTierAllPlayStandings', () => {
     expect(result[0].teams[0].all_play_wlt).toBe('7-3-0');
   });
 
-  it('regroups teams by a per-year tierMembership override (promotion/relegation)', () => {
+  it('regroups teams by a per-year competitionMembership override (promotion/relegation)', () => {
     // 0003 is 'D-League' in the static config, but this season's membership
-    // (e.g. tier-history.json after a promotion) puts it in Premier League.
+    // (e.g. competition-history.json after a promotion) puts it in Premier League.
     const franchises = [
       makeFranchise('0001', '0.700'),
       makeFranchise('0002', '0.600'),
@@ -276,11 +276,11 @@ describe('getTierAllPlayStandings', () => {
       '0004': 'D-League',
     };
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
 
-    expect(result[0].tier).toBe('Premier League');
+    expect(result[0].competition).toBe('Premier League');
     expect(result[0].teams.map(t => t.id)).toEqual(['0001', '0003']);
-    expect(result[1].tier).toBe('D-League');
+    expect(result[1].competition).toBe('D-League');
     expect(result[1].teams.map(t => t.id)).toEqual(['0002', '0004']);
   });
 
@@ -291,20 +291,20 @@ describe('getTierAllPlayStandings', () => {
       '0001': 'Premier Leage', // typo
       '0003': 'D-League',
     };
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture, undefined, membership);
     // 0001 falls back to its config tier (Premier League), not dropped
-    expect(result.find(t => t.tier === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
-    expect(result.find(t => t.tier === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
+    expect(result.find(t => t.competition === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
+    expect(result.find(t => t.competition === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
     // No stray "Premier Leage" tier leaks through
-    expect(result.map(t => t.tier).sort()).toEqual(['D-League', 'Premier League']);
+    expect(result.map(t => t.competition).sort()).toEqual(['D-League', 'Premier League']);
   });
 
   it('falls back to config.tier when no override is given', () => {
     const franchises = [makeFranchise('0001', '0.700'), makeFranchise('0003', '0.500')];
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture, undefined, null);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture, undefined, null);
     // 0001 → Premier (config), 0003 → D-League (config)
-    expect(result.find(t => t.tier === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
-    expect(result.find(t => t.tier === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
+    expect(result.find(t => t.competition === 'Premier League')?.teams.map(t => t.id)).toEqual(['0001']);
+    expect(result.find(t => t.competition === 'D-League')?.teams.map(t => t.id)).toEqual(['0003']);
   });
 
   it('returns only tiers that have teams (filters empty tiers)', () => {
@@ -313,10 +313,10 @@ describe('getTierAllPlayStandings', () => {
       makeFranchise('0002', '0.500'),
     ];
 
-    const result = getTierAllPlayStandings(franchises, aflConfigFixture);
+    const result = getCompetitionAllPlayStandings(franchises, aflConfigFixture);
     // 0003/0004 D-League teams missing from franchises array
     expect(result).toHaveLength(1);
-    expect(result[0].tier).toBe('Premier League');
+    expect(result[0].competition).toBe('Premier League');
   });
 });
 

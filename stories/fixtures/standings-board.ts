@@ -106,6 +106,6 @@ export const aflDivisionsSeeded: DivisionStandings[] = aflDivisions.map((d) => (
 
 /** All-play tiers: the top half is the Premier League, the rest the D-League. */
 export const aflTiers = [
-  { tier: 'Premier League', teams: aflRows.slice(0, 12) },
-  { tier: 'D-League', teams: aflRows.slice(12) },
+  { competition: 'Premier League', teams: aflRows.slice(0, 12) },
+  { competition: 'D-League', teams: aflRows.slice(12) },
 ];

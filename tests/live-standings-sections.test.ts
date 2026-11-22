@@ -15,7 +15,7 @@ import {
   weekScores,
   weekVictoryPoints,
 } from '../src/utils/live/standings-sections';
-import { buildAllPlayBase, buildTierSections } from '../src/utils/live/afl-live-standings';
+import { buildAllPlayBase, buildCompetitionSections } from '../src/utils/live/afl-live-standings';
 import {
   buildDivisionSections,
   buildMadSection,
@@ -220,7 +220,7 @@ describe('the AFL tiers', () => {
     weekCounted: false,
     weekInCompetition: true,
   };
-  const tiers = buildTierSections({
+  const tiers = buildCompetitionSections({
     feedRows,
     teamTier: (id) => membership[id],
     allPlay,

@@ -129,12 +129,12 @@ function lockedLabel(t: TrophyCaseItem): string {
 <span
   class:list={[
     'ui-badge ui-badge--inline franchise-hero__tier-pill',
-    team.tier === 'Premier League'
+    team.competition === 'Premier League'
       ? 'franchise-hero__tier-pill--premier'
       : 'franchise-hero__tier-pill--dleague',
   ]}
 >
-  {team.tier}
+  {team.competition}
 </span>
 )}
 {/* Compact trophy summary: label + count + on-brand title-type pips,

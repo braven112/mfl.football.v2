@@ -93,7 +93,7 @@ interface RawTeam {
   aliases?: string[];
   division?: string;
   conference?: string;
-  tier?: string;
+  competition?: string;
   color?: string;
   colorPrimary?: string;
   colorSecondary?: string;
@@ -360,7 +360,7 @@ export interface FranchiseBrand {
   aliases: string[];
   division: string | null;
   conference: string | null;
-  tier: string | null;
+  competition: string | null;
   colors: FranchiseColor[];
   /** What the site derives from those hexes before it paints anything. */
   derived: DerivedColor[];
@@ -667,7 +667,7 @@ export function franchiseBrand(
     aliases: Array.isArray(team.aliases) ? team.aliases : [],
     division: team.division ?? null,
     conference: team.conference ?? null,
-    tier: team.tier ?? null,
+    competition: team.competition ?? null,
     colors,
     derived: derivedColorsOf(leagueSlug, team),
     accentProperty: teamAccentProperty(team.franchiseId),

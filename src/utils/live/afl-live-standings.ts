@@ -14,7 +14,7 @@
  *    while MFL had week 8), so it only FILLS weeks MFL's column no longer
  *    carries — the tier competition runs to week 17, past the week-14 end of
  *    MFL's regular season.
- *  - Membership: `tier-history.json`, the Standings page's source. Ranked on
+ *  - Membership: `competition-history.json`, the Standings page's source. Ranked on
  *    all-play, then points, then Power Rank — the Standings page's order.
  *
  * SERVER-SIDE ONLY.
@@ -22,14 +22,14 @@
 
 import type { LiveAllPlayBase, LiveAllPlayRecord, LiveStandingsSection } from '../../types/live';
 import { allPlayWeek } from '../game-results.mjs';
-import { resolveTierCutoffWeek } from '../all-play.mjs';
-import { getTierLogo, getTierLogoDark, getTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../afl-tier';
-import { tierZoneFor } from '../tier-board';
+import { resolveCompetitionCutoffWeek } from '../all-play.mjs';
+import { getCompetitionLogo, getCompetitionLogoDark, getCompetitionMembership, D_LEAGUE, PREMIER_LEAGUE } from '../afl-competition';
+import { competitionZoneFor } from '../competition-board';
 
 /** The one league whose tab carries tiers. */
-export const AFL_TIERS_SLUG = 'afl-fantasy';
+export const AFL_COMPETITION_SLUG = 'afl-fantasy';
 
-export { getTierMembership, resolveTierCutoffWeek };
+export { getCompetitionMembership, resolveCompetitionCutoffWeek };
 
 function num(value: unknown): number {
   const parsed = Number.parseFloat(`${value ?? ''}`.replace(/[$,]/g, ''));
@@ -114,7 +114,7 @@ function pct(r: LiveAllPlayRecord): number {
  * The Premier League and D-League tables, each in its official all-play order
  * with the constitution's zones on its positions.
  */
-export function buildTierSections(input: {
+export function buildCompetitionSections(input: {
   feedRows: readonly Record<string, unknown>[];
   teamTier: (franchiseId: string) => string | undefined;
   allPlay: LiveAllPlayBase | null;
@@ -139,7 +139,7 @@ export function buildTierSections(input: {
       return (pwr.get(b) ?? 0) - (pwr.get(a) ?? 0) || position.get(a)! - position.get(b)!;
     });
     const zones = sorted.map((_, i) => {
-      const z = tierZoneFor(i + 1, sorted.length, { tier, leagueSlug });
+      const z = competitionZoneFor(i + 1, sorted.length, { competition: tier, leagueSlug });
       return z && z.zone !== 'money' ? { tone: z.zone as 'up' | 'down' | 'danger' | 'rename', label: z.label } : null;
     });
     return [
@@ -149,7 +149,7 @@ export function buildTierSections(input: {
         basis: 'all-play' as const,
         franchiseIds: sorted,
         zones,
-        logo: { src: getTierLogo(tier), darkSrc: getTierLogoDark(tier) },
+        logo: { src: getCompetitionLogo(tier), darkSrc: getCompetitionLogoDark(tier) },
       },
     ];
   });

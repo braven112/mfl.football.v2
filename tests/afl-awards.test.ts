@@ -352,7 +352,7 @@ describe('getFranchiseTrophyRank', () => {
     // Pin history:
     // - 2026-07-03: Smokane FC 20→19 (2017 premier-league removed; 2017 was
     //   one combined 24-team all-play table, no Premier League that year —
-    //   see TIER_COMPETITION_FIRST_SEASON in src/utils/afl-tier.ts).
+    //   see COMPETITION_FIRST_SEASON in src/utils/afl-competition.ts).
     // - 2026-08-11 (commissioner-approved): division titles re-derived from
     //   MFL's OFFICIAL leagueStandings order instead of the old divpct-first
     //   sort — 22 historical titles moved. Smokane FC 19→17 (lost 2004/2011/
@@ -363,7 +363,7 @@ describe('getFranchiseTrophyRank', () => {
     //   The Cup ran one more season than we had recorded, as an all-play table
     //   decided at its week-16 cutoff — the site was computing that table
     //   through week 17, which handed the top spot to Fullybaked. See
-    //   TIER_COMPETITION_FIRST_SEASON in src/utils/afl-tier.ts.
+    //   COMPETITION_FIRST_SEASON in src/utils/afl-competition.ts.
     const leader = getFranchiseTrophyRank('0002');
     expect(leader.count).toBe(19);
     expect(leader.rank).toBe(1);

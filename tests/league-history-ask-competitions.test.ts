@@ -5,13 +5,13 @@
  * League", it answered about soccer.
  *
  * Every fact comes from a file that already records it: the config's
- * tierCompetition, tier-history.json, awards-history.json and each season's
+ * competitionSettings, competition-history.json, awards-history.json and each season's
  * weekly-results.json.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import afl from '../data/afl-fantasy/derived/league-history.json';
 import theleague from '../data/theleague/derived/league-history.json';
-import tierHistory from '../data/afl-fantasy/tier-history.json';
+import competitionHistory from '../data/afl-fantasy/competition-history.json';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
 import { QueryError, competitionStory, runQuery } from '../src/utils/league-history/ask-query.mjs';
 import { askHistory } from '../src/utils/league-history/ask';
@@ -34,7 +34,7 @@ const rows = (q: any) => {
 describe('loadLeagueCompetitions', () => {
   it('loads the AFL competition from its own files, from the first all-play season on', () => {
     expect(comp).not.toBeNull();
-    expect(comp.tierCompetition.firstSeason).toBe(2017);
+    expect(comp.competitionSettings.firstSeason).toBe(2017);
     expect(Object.keys(comp.weekly)[0]).toBe('2017');
   });
 
@@ -45,7 +45,7 @@ describe('loadLeagueCompetitions', () => {
 
 describe('competition units', () => {
   it('ranks every recorded champion first in its own table', () => {
-    const seasons = (tierHistory as any).seasons as Record<string, any>;
+    const seasons = (competitionHistory as any).seasons as Record<string, any>;
     for (const [year, s] of Object.entries(seasons)) {
       if (!s.champions) continue;
       const firsts = rows({ unit: 'competitionSeasons', years: { from: Number(year), to: Number(year) }, where: [{ field: 'rank', op: 'eq', value: 1 }], columns: ['competition', 'champion'] });

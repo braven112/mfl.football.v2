@@ -11,7 +11,7 @@
  * Premier League.
  */
 import { chooseTeamName } from '../../../utils/team-names';
-import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
+import { getCompetitionLogo, getCompetitionLogoDark } from '../../../utils/afl-competition-logo';
 import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import TeamIconCell from '../../shared/TeamIconCell.astro';
@@ -22,7 +22,7 @@ interface Team {
   nameMedium?: string;
   nameShort?: string;
   abbrev?: string;
-  tier?: string;
+  competition?: string;
   icon?: string;
 }
 
@@ -54,7 +54,7 @@ const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
 function makeRows(): StandingRow[] {
   return standings.map(f => {
     const team = teamMap.get(f.id);
-    const tier = (team?.tier === 'Premier League' ? 'Premier League' : 'D-League') as StandingRow['tier'];
+    const tier = (team?.competition === 'Premier League' ? 'Premier League' : 'D-League') as StandingRow['tier'];
     const displayName = team
       ? chooseTeamName({
           fullName: team.name,
@@ -172,8 +172,8 @@ if (userRow) {
   <div class="afl-tiers__header">
     <div class="afl-tiers__heading">
       <ThemeImage
-        src={getTierLogo(userTier)}
-        darkSrc={getTierLogoDark(userTier)}
+        src={getCompetitionLogo(userTier)}
+        darkSrc={getCompetitionLogoDark(userTier)}
         alt={`${userTier} logo`}
         class="afl-tiers__logo"
         loading="lazy"

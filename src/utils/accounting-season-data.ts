@@ -16,11 +16,11 @@
  */
 
 import type { LeagueDefinition } from '../config/leagues';
-import { calculateAllPlayFromWeekly, getTierAllPlayStandings } from './standings';
-import { getTierMembership } from './afl-tier';
+import { calculateAllPlayFromWeekly, getCompetitionAllPlayStandings } from './standings';
+import { getCompetitionMembership } from './afl-competition';
 // .mjs shared with node scripts (see its header). No ts-expect-error: its
 // types resolve under the project config, so the directive would be unused.
-import { resolveTierCutoffWeek } from './all-play.mjs';
+import { resolveCompetitionCutoffWeek } from './all-play.mjs';
 import { resolveConfigForYear } from './team-names';
 import { extractSeasonStructure, applySeasonStructure } from './afl-structure';
 
@@ -91,14 +91,14 @@ function buildTierTable(read: SeasonDataReader, league: LeagueDefinition, year: 
   const franchises = standings?.leagueStandings?.franchise;
   if (!Array.isArray(franchises) || franchises.length === 0) return {};
 
-  const tierMembership = getTierMembership(year);
-  if (!tierMembership) return {};
+  const competitionMembership = getCompetitionMembership(year);
+  if (!competitionMembership) return {};
 
   const baseConfig = readJson<any>(read, tierConfigPath(league));
   if (!baseConfig) return {};
 
   const weeklyResults = readJson<any>(read, feedPath(league, year, 'weekly-results'));
-  const cutoffWeek = resolveTierCutoffWeek(baseConfig?.tierCompetition, year);
+  const cutoffWeek = resolveCompetitionCutoffWeek(baseConfig?.competitionSettings, year);
   const calculatedAllPlay = weeklyResults
     ? calculateAllPlayFromWeekly(weeklyResults, cutoffWeek)
     : undefined;
@@ -107,11 +107,11 @@ function buildTierTable(read: SeasonDataReader, league: LeagueDefinition, year: 
   const seasonStructure = extractSeasonStructure(readJson<any>(read, feedPath(league, year, 'league')));
   const seasonConfig = applySeasonStructure(yearResolved, seasonStructure);
 
-  const tiers = getTierAllPlayStandings(
+  const tiers = getCompetitionAllPlayStandings(
     franchises,
     seasonConfig,
     calculatedAllPlay,
-    tierMembership,
+    competitionMembership,
     // MFL's own order already applies the league's tiebreakers — never
     // re-sort it locally. Same rule as every other standings consumer.
     { preserveFeedOrder: true }
@@ -119,7 +119,7 @@ function buildTierTable(read: SeasonDataReader, league: LeagueDefinition, year: 
 
   const table: Record<string, string[]> = {};
   for (const group of tiers) {
-    table[group.tier] = group.teams.map((team) => String(team.id));
+    table[group.competition] = group.teams.map((team) => String(team.id));
   }
   return table;
 }

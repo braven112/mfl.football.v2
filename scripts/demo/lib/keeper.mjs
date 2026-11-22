@@ -82,7 +82,7 @@ export function keeperConfig({ leagueId }) {
       aliases: [],
       conference: KEEPER_CONFERENCE.code,
       division: f.division,
-      tier: '',
+      competition: '',
       colorPrimary: f.colorPrimary,
       colorSecondary: f.colorSecondary,
       loaderQuips: [`${f.nameShort} are weighing their seventh keeper…`],

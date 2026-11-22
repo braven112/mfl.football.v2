@@ -5,7 +5,7 @@
 
 import type { StandingsFranchise, TeamStanding, DivisionStandings, PlayoffSeeding } from '../types/standings';
 // Single source of truth for the all-play accumulation, shared with the node
-// tier-movement scripts (scripts/lib/afl-tier-standings.mjs). See all-play.mjs.
+// tier-movement scripts (scripts/lib/afl-competition-standings.mjs). See all-play.mjs.
 import { accumulateAllPlay } from './all-play.mjs';
 
 // Weekly results type for calculating all-play from weekly data
@@ -56,7 +56,7 @@ type LeagueConfig = {
     aliases?: string[];
     conference?: string;
     division: string;
-    tier?: string;
+    competition?: string;
     icon?: string;
     banner?: string;
   }>;
@@ -382,7 +382,7 @@ export function getLeagueStandings(
 
 // Get all-play standings (one combined table, no tier split).
 // Optional calculatedAllPlay overrides MFL's cumulative all-play with records
-// computed from weekly results (mirrors getTierAllPlayStandings) — required
+// computed from weekly results (mirrors getCompetitionAllPlayStandings) — required
 // for pre-2017 feeds, which carry no all_play fields at all.
 export function getAllPlayStandings(
   franchises: StandingsFranchise[],
@@ -441,20 +441,20 @@ export function getAllPlayStandings(
 // Get all-play standings grouped by tier (for AFL Fantasy)
 // Optional calculatedAllPlay parameter allows using week-limited all-play records
 // instead of MFL's cumulative all-play data.
-// Optional tierMembership ({ franchiseId: tier }) overrides the static
-// config.tier so a given season is grouped by THAT season's makeup (from
-// data/afl-fantasy/tier-history.json via getTierMembership), not the current
-// one. Teams absent from the override fall back to config.tier.
-export function getTierAllPlayStandings(
+// Optional competitionMembership ({ franchiseId: tier }) overrides the static
+// config.competition so a given season is grouped by THAT season's makeup (from
+// data/afl-fantasy/competition-history.json via getCompetitionMembership), not the current
+// one. Teams absent from the override fall back to config.competition.
+export function getCompetitionAllPlayStandings(
   franchises: StandingsFranchise[],
   config: LeagueConfig,
   calculatedAllPlay?: Map<string, AllPlayRecord>,
-  tierMembership?: Record<string, string> | null,
+  competitionMembership?: Record<string, string> | null,
   opts: StandingsSortOptions = {}
-): { tier: string; teams: TeamStanding[] }[] {
-  // The league's tiers, top first: the config's tierCompetition.tiers
+): { competition: string; teams: TeamStanding[] }[] {
+  // The league's tiers, top first: the config's competitionSettings.names
   // (Premier League, D-League for the AFL).
-  const declaredTiers = (config as { tierCompetition?: { tiers?: string[] } }).tierCompetition?.tiers;
+  const declaredTiers = (config as { competitionSettings?: { names?: string[] } }).competitionSettings?.names;
   const tierOrder: string[] = declaredTiers?.length ? declaredTiers : ['Premier League', 'D-League'];
 
   // First get league standings to get seed information
@@ -484,10 +484,10 @@ export function getTierAllPlayStandings(
     const teamConfig = getTeamConfig(team.id, config);
     // Only honor a recognized override tier; an unknown value (typo/new tier)
     // would group the team under a stray key and then get silently dropped by
-    // the `tierOrder` filter below — fall back to config.tier instead.
-    const overrideTier = tierMembership?.[team.id];
+    // the `tierOrder` filter below — fall back to config.competition instead.
+    const overrideTier = competitionMembership?.[team.id];
     const validOverride = overrideTier && tierOrder.includes(overrideTier) ? overrideTier : undefined;
-    const tier = validOverride || teamConfig?.tier || 'Unknown';
+    const tier = validOverride || teamConfig?.competition || 'Unknown';
     if (!tiers[tier]) {
       tiers[tier] = [];
     }
@@ -529,7 +529,7 @@ export function getTierAllPlayStandings(
   return tierOrder
     .filter(tier => tiers[tier])
     .map(tier => ({
-      tier,
+      competition: tier,
       teams: sortTeamsByAllPlay(tiers[tier]),
     }));
 }

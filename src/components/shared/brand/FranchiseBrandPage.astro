@@ -189,7 +189,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
         }
         <div>
           <p class="cb__city">
-            {[brand.division, brand.tier].filter(Boolean).join(' · ') || heroCity}
+            {[brand.division, brand.competition].filter(Boolean).join(' · ') || heroCity}
           </p>
           {/* `.cb__nick` carries `color: inherit`, which is what beats the
               layout's global themed-h1 rule. Without it this renders in the
@@ -432,7 +432,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
               <span>
                 <span class="cb__bname">{brand.nameShort.toUpperCase()}</span>
                 <span class="cb__bmeta" style={`color:${ink};opacity:.75`}>
-                  {brand.division || brand.tier || league.name}
+                  {brand.division || brand.competition || league.name}
                 </span>
               </span>
             </span>

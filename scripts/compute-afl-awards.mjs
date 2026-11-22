@@ -13,7 +13,7 @@
  *                       leagueStandings order (MFL applies the constitution's
  *                       tiebreakers itself — never re-sort here)
  *   - premier-league / dleague-champion   top of each all-play tier
- *                       (derived from tier-history.json — note 2)
+ *                       (derived from competition-history.json — note 2)
  *
  * DATA SOURCING NOTES (load-bearing — read before editing):
  *
@@ -24,12 +24,12 @@
  *      on mismatch the year is fetched online instead.
  *
  *   2. Tier champions (Premier League / D-League) are derived from
- *      data/afl-fantasy/tier-history.json — the per-season tier source of truth
- *      written by scripts/compute-afl-tier-movement.mjs. MFL has no tier markers
+ *      data/afl-fantasy/competition-history.json — the per-season tier source of truth
+ *      written by scripts/compute-afl-competition-movement.mjs. MFL has no tier markers
  *      (its all-play export O=101 returns one 24-team list), so membership lives
  *      in that file; given it, the two tier champions are deterministic. This
- *      closes the old hand-entry gap: tier-history values supersede legacy
- *      `manual:tier-champion` rows on re-run. Years tier-history doesn't record
+ *      closes the old hand-entry gap: competition-history values supersede legacy
+ *      `manual:competition-champion` rows on re-run. Years competition-history doesn't record
  *      (pre-2020 tier champions were never captured) simply get no tier award.
  *
  * Usage:
@@ -66,7 +66,7 @@ const AFL_LEAGUE = getLeagueBySlug('afl-fantasy');
 const FEEDS_DIR = path.join(ROOT, AFL_LEAGUE.dataPath, 'mfl-feeds');
 const CONFIG_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'afl.config.json');
 const OUTPUT_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'awards-history.json');
-const TIER_HISTORY_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'tier-history.json');
+const COMPETITION_HISTORY_PATH = path.join(ROOT, AFL_LEAGUE.dataPath, 'competition-history.json');
 
 // Per-year MFL host + league id. Pre-2016 the AFL lived on a different host and
 // league id every season (see data/afl-fantasy/year-host-map.json); 2016+
@@ -424,26 +424,26 @@ function divisionWinners(league, standings) {
 }
 
 // Tier champions (premier-league / dleague-champion) are derived from the
-// per-season tier source of truth, data/afl-fantasy/tier-history.json, written
-// by scripts/compute-afl-tier-movement.mjs (see header note 2). This closes the
-// old hand-entry gap. Years tier-history doesn't record champions for yield no
-// tier award; the per-year merge in main() lets these tier-history values
-// supersede any legacy `manual:tier-champion` rows.
-let TIER_HISTORY = null;
-async function loadTierHistory() {
-  if (!TIER_HISTORY) TIER_HISTORY = (await readJson(TIER_HISTORY_PATH)) ?? { seasons: {} };
-  return TIER_HISTORY;
+// per-season tier source of truth, data/afl-fantasy/competition-history.json, written
+// by scripts/compute-afl-competition-movement.mjs (see header note 2). This closes the
+// old hand-entry gap. Years competition-history doesn't record champions for yield no
+// tier award; the per-year merge in main() lets these competition-history values
+// supersede any legacy `manual:competition-champion` rows.
+let COMPETITION_HISTORY = null;
+async function loadCompetitionHistory() {
+  if (!COMPETITION_HISTORY) COMPETITION_HISTORY = (await readJson(COMPETITION_HISTORY_PATH)) ?? { seasons: {} };
+  return COMPETITION_HISTORY;
 }
 
 async function tierChampions(year) {
-  const history = await loadTierHistory();
+  const history = await loadCompetitionHistory();
   const champs = history.seasons?.[String(year)]?.champions;
   if (!champs) return {};
   const out = {};
   if (champs['premier-league'])
-    out['premier-league'] = { franchiseId: champs['premier-league'], source: 'tier-history' };
+    out['premier-league'] = { franchiseId: champs['premier-league'], source: 'competition-history' };
   if (champs['dleague-champion'])
-    out['dleague-champion'] = { franchiseId: champs['dleague-champion'], source: 'tier-history' };
+    out['dleague-champion'] = { franchiseId: champs['dleague-champion'], source: 'competition-history' };
   return out;
 }
 
@@ -622,11 +622,11 @@ async function main() {
       const existingSource =
         typeof existingAward?.source === 'string' ? existingAward.source : '';
       // Hand-curated rows (source "manual:*") always win — EXCEPT the tier
-      // champions, which are now auto-derived from tier-history.json and
-      // supersede the legacy `manual:tier-champion` entries.
+      // champions, which are now auto-derived from competition-history.json and
+      // supersede the legacy `manual:competition-champion` entries.
       if (
         existingSource.startsWith('manual:') &&
-        !(val.source === 'tier-history' && existingSource === 'manual:tier-champion')
+        !(val.source === 'competition-history' && existingSource === 'manual:competition-champion')
       ) {
         continue;
       }
@@ -715,9 +715,9 @@ async function main() {
       'tests/afl-division-titles.test.ts. League Champion (afl-championship), ' +
       'AL/NL champions and the NIT are auto-derived for 2016+ from playoff ' +
       'brackets matched by NAME. Premier League + D-League tier champions are ' +
-      `auto-derived from ${path.relative(ROOT, TIER_HISTORY_PATH)} (source ` +
-      '"tier-history"), superseding the legacy hand-entered ' +
-      '"manual:tier-champion" rows. Still HAND-ENTERED from the official League ' +
+      `auto-derived from ${path.relative(ROOT, COMPETITION_HISTORY_PATH)} (source ` +
+      '"competition-history"), superseding the legacy hand-entered ' +
+      '"manual:competition-champion" rows. Still HAND-ENTERED from the official League ' +
       'Awards table (source "manual:league-awards" / "manual:champion-history") ' +
       'and NEVER clobbered by a re-run: the AFL Cup (2015 and 2016 knockouts, ' +
       'and 2017 — the Cup’s last season, an all-play table ' +

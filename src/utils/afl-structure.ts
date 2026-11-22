@@ -14,8 +14,8 @@
  * (id, name, conference) and each franchise's `division` id. These helpers
  * extract that season's structure from the feed and overlay it onto the league
  * config so the standings grouping utilities (src/utils/standings.ts) group by
- * THAT season's makeup — the same pattern tier-history.json + getTierMembership
- * (src/utils/afl-tier.ts) use for per-season tier membership.
+ * THAT season's makeup — the same pattern competition-history.json + getCompetitionMembership
+ * (src/utils/afl-competition.ts) use for per-season tier membership.
  *
  * Pure functions, no JSON imports — callers load the feed (pages already glob
  * mfl-feeds) and pass it in.

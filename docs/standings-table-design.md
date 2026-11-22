@@ -61,7 +61,7 @@ extends the raw `StandingsFranchise` MFL feed with `teamName`, `division`,
 - `getDivisionStandings(f, cfg)` → `{ name, teams }[]` — seeds injected from league standings.
 - `getLeagueStandings(f, cfg)` → `TeamStanding[]` with `seed` (division winners take top seeds).
 - `getAllPlayStandings(f, cfg, calc?)` → `TeamStanding[]` sorted by all-play pct.
-- `getTierAllPlayStandings(f, cfg, calc?, tierMembership?)` → `{ tier, teams }[]`.
+- `getCompetitionAllPlayStandings(f, cfg, calc?, competitionMembership?)` → `{ tier, teams }[]`.
 - `getConferenceStandings(f, cfg, code)` → `{ conference, divisionWinners, wildCards, allTeams }`
   — the tables use `.allTeams` (each row carries `conferenceSeed`).
 

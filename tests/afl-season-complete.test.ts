@@ -3,7 +3,7 @@
  *
  * scripts/compute-afl-awards.mjs takes the first row of each division in MFL's
  * official standings order as that division's champion. Standings exist from
- * week 1, so without this guard the weekly afl-tier-rollover workflow — which
+ * week 1, so without this guard the weekly afl-competition-rollover workflow — which
  * COMMITS awards-history.json — would write four in-progress division titles
  * onto the trophy wall and churn them every Monday until the season ended.
  */

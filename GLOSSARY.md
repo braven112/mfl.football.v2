@@ -35,7 +35,7 @@ One of the AFL's two halves (AL and NL), each with its own player pool, standing
 
 **Premier League and D-League**:
 The AFL's own promotion and relegation competition, shown as its custom standings tab.
-_Avoid_: Tiers (tier is a business term only)
+_Avoid_: Tiers (tier is a business term only).
 
 ## Contracts (TheLeague)
 
