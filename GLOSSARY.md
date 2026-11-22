@@ -33,8 +33,9 @@ A draft-only league with no lineups to set and no live MFL syncing. It sits outs
 **Conference**:
 One of the AFL's two halves (AL and NL), each with its own player pool, standings and draft.
 
-**Tiers (AFL competition)**:
-The AFL's own promotion and relegation table (Premier League and D-League), shown as its custom standings tab. Not the same thing as a league tier.
+**Premier League and D-League**:
+The AFL's own promotion and relegation competition, shown as its custom standings tab.
+_Avoid_: Tiers (tier is a business term only)
 
 ## Contracts (TheLeague)
 
@@ -129,8 +130,8 @@ The live scoring board across every league an owner plays in, at mfl.football/li
 
 ## Products
 
-**League tier**:
-What a league has bought, set once per league: history, ai or full.
+**Tier**:
+What a league has bought, set once per league: history, ai or full. Tier is only ever a business term, never a league competition.
 _Avoid_: Plan, package (for this setting)
 
 **History tier**:
