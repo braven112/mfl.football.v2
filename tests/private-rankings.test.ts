@@ -60,6 +60,18 @@ describe('private rankings view', () => {
     expect(c.rows.map((r) => r.player.name)).toEqual(['Jahmyr Gibbs', 'Brock Bowers', 'Jeremiyah Love']);
   });
 
+  it('this week: only players with a projection, most projected points first', () => {
+    const wk = board([
+      { ...P.gibbs, season: { ...P.gibbs.season, weekPts: 20.6, weekPosRank: 'RB2' } },
+      { ...P.bowers, season: { ...P.bowers.season, weekPts: 22.1, weekPosRank: 'TE1' } },
+      P.love,
+    ]);
+    const v = buildView(wk, parseViewQuery(new URLSearchParams('view=week')), null, null);
+    expect(v.rows.map((r) => r.player.name)).toEqual(['Brock Bowers', 'Jahmyr Gibbs']);
+    const byRos = buildView(wk, parseViewQuery(new URLSearchParams('view=week&sort=ros')), null, null);
+    expect(byRos.rows.map((r) => r.player.name)).toEqual(['Jahmyr Gibbs', 'Brock Bowers']);
+  });
+
   it('caps a long tab unless all=1', () => {
     const many = board(Array.from({ length: PAGE_SIZE + 5 }, (_, i) => ({ id: String(i), name: `P${i}`, pos: 'WR', team: '', age: null, dynasty: { avg: i + 1 } })));
     expect(buildView(many, parseViewQuery(new URLSearchParams()), null, null)).toMatchObject({ truncated: true, total: PAGE_SIZE + 5 });

@@ -90,7 +90,7 @@ try {
 const result = load.ok ? buildView(load.board, q, rosters, mine) : null;
 const clock = leagueClock(boardSlug).zone;
 
-const VIEW_LABELS: Record<View, string> = { dynasty: 'Dynasty', rookies: 'Rookies', season: 'This season' };
+const VIEW_LABELS: Record<View, string> = { dynasty: 'Dynasty', rookies: 'Rookies', season: 'This season', week: 'This week' };
 const OWN_LABELS: Record<string, string> = { all: 'Everyone', mine: 'My team', available: 'Free agents', rostered: 'Other teams' };
 const sorts = SORTS[q.view];
 
@@ -130,6 +130,7 @@ const SOURCE_IDS: Record<View, string[]> = {
   dynasty: ['fbgDynasty', 'dlfDynasty', 'fpDynasty'],
   rookies: ['fbgRookie', 'dlfRookie', 'fpRookie', 'rsp'],
   season: ['fbgRos', 'fbgRosProj', 'fbgWeek', 'fpRos'],
+  week: ['fbgWeek'],
 };
 const sourceLines = load.ok
   ? SOURCE_IDS[q.view].filter((id) => load.board.sources[id]).map((id) => {
@@ -200,9 +201,15 @@ const sourceLines = load.ok
         {boardSlug === 'afl-fantasy' && rosters && ' Roster status is for your conference.'}
       </p>
 
+      {q.view === 'week' ? (
+      <p class="mr-hint">
+        This week's Footballguys projections, scored with this league's own settings. Set Lineup ranks your players in this order.
+      </p>
+      ) : (
       <p class="mr-hint">
         Consensus is FantasyPros' expert average, with the experts' best-to-worst range. Gap compares position ranks ({q.view === 'season' ? 'Footballguys rest of season' : 'your FBG and DLF average'} against the consensus), so your leagues' tight-end scoring doesn't skew it: +4 means your sources rank him 4 spots higher at his position than the market (green, a buy); red is a sell.
       </p>
+      )}
 
       {result!.rows.length === 0 ? (
         <p class="mr-empty">No players match these filters.</p>
@@ -241,6 +248,14 @@ const sourceLines = load.ok
                   <th scope="col" class="mr-num"><a href={sortHref('gap')} title="Position spots between the consensus and your sources: + means yours rank him higher at his position">Gap {arrow('gap')}</a></th>
                   <th scope="col" class="mr-num"><a href={sortHref('ppg')}>PPG {arrow('ppg')}</a></th>
                   <th scope="col"><a href={sortHref('weekPts')}>This week {arrow('weekPts')}</a></th>
+                </>
+              )}
+              {q.view === 'week' && (
+                <>
+                  <th scope="col" class="mr-num"><a href={sortHref('weekPts')}>Proj pts {arrow('weekPts')}</a></th>
+                  <th scope="col" class="mr-num">Pos rank</th>
+                  <th scope="col">Matchup</th>
+                  <th scope="col" class="mr-num"><a href={sortHref('ros')}>ROS {arrow('ros')}</a></th>
                 </>
               )}
               {rosters && <th scope="col">Rostered by</th>}
@@ -306,6 +321,14 @@ const sourceLines = load.ok
                           </>
                         ) : '—'}
                       </td>
+                    </>
+                  )}
+                  {q.view === 'week' && (
+                    <>
+                      <td class="mr-num mr-key" data-label="Proj pts">{fmt(p.season?.weekPts, 1)}</td>
+                      <td class="mr-num" data-label="Pos rank">{p.season?.weekPosRank ?? '—'}</td>
+                      <td class="mr-week" data-label="Matchup">{p.season?.matchup ?? '—'}</td>
+                      <td class="mr-num" data-label="ROS">{rank(p.season?.ros)}</td>
                     </>
                   )}
                   {rosters && (

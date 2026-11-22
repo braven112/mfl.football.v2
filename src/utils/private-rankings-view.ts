@@ -65,7 +65,7 @@ export interface BoardFile {
   players: BoardPlayer[];
 }
 
-export const VIEWS = ['dynasty', 'rookies', 'season'] as const;
+export const VIEWS = ['dynasty', 'rookies', 'season', 'week'] as const;
 export type View = (typeof VIEWS)[number];
 export const POSITIONS = ['all', 'QB', 'RB', 'WR', 'TE'] as const;
 export type PositionFilter = (typeof POSITIONS)[number];
@@ -97,6 +97,11 @@ export const SORTS: Record<View, { key: string; label: string; dir: 'asc' | 'des
     { key: 'rosPts', label: 'ROS pts', dir: 'desc' },
     { key: 'ppg', label: 'PPG', dir: 'desc' },
     { key: 'weekPts', label: 'This week', dir: 'desc' },
+  ],
+  // This week's Footballguys projections, scored with the league's own settings.
+  week: [
+    { key: 'weekPts', label: 'Proj pts', dir: 'desc' },
+    { key: 'ros', label: 'ROS', dir: 'asc' },
   ],
 };
 
@@ -149,6 +154,7 @@ export function sortValue(p: BoardPlayer, view: View, key: string): number | nul
 export function inView(p: BoardPlayer, view: View): boolean {
   if (view === 'dynasty') return p.dynasty?.avg != null;
   if (view === 'rookies') return p.rookie != null;
+  if (view === 'week') return typeof p.season?.weekPts === 'number';
   return p.season?.ros != null || p.season?.weekPts != null;
 }
 
