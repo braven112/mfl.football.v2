@@ -615,6 +615,10 @@ const pageConfig = {
 
   {/* <-escape so no value (e.g. a player name) can break out of the
       script element with a literal </script>. */}
+  <script>
+    // The site owner's My Rank pills and ranks (no-op for everyone else).
+    import '../../../utils/trade-builder-my-rank';
+  </script>
   <script id="tb-config" type="application/json" set:html={JSON.stringify(pageConfig).replace(/</g, '\\u003c')}></script>
 
   <script>
