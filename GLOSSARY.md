@@ -143,11 +143,15 @@ The tier for a league that bought Ask the History and nothing else. It's an inte
 A league that gets the AI Beat Reporter, with history as an add-on and none of the site tools.
 
 **Full custom site**:
-A league with its own complete site: lineups, live scoring, trades, contracts and every tool. Priced by team count from $3,000 setup.
-_Avoid_: Full management (in customer copy)
+A league with its own complete site: lineups, live scoring, trades, contracts and every tool, like TheLeague, the AFL and Archie's League. Priced by team count from $3,000 setup.
+_Avoid_: Full management
 
 **AI Beat Reporter**:
 The product that puts a reporter on a league's MFL pages.
+
+**Bundle**:
+Ask the History and the AI Beat Reporter bought together, sold as two for the price of one.
+_Avoid_: Package (that word is for full custom sites)
 
 **Seasonal theme**:
 A custom league-wide art set, such as Halloween or Christmas marks, sold one time per theme.
