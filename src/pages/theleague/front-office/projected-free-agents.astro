@@ -969,6 +969,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   initRankingTable({
     tableSelector: '.pfa-table',
+    // Auction prep: the site owner's own redraft/dynasty blend (my-ranks.ts).
+    kind: 'blend',
     anchorSelector: '[data-sort="ppg"]',
     // The ranking block is desktop-only here and the <td>s already carry this
     // class, so the headers must too — otherwise the header row keeps columns

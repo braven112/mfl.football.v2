@@ -199,8 +199,18 @@ describe('the board data never enters this repo', () => {
       }
     };
     walk('src');
-    expect(importers.sort()).toEqual(['src/components/shared/MyRankingsPage.astro']);
-    const page = readFileSync('src/components/shared/MyRankingsPage.astro', 'utf8');
-    expect(page).not.toMatch(/<script/);
+    // The board page, the site owner's ranks API (server-only, private,
+    // no-store) and the marker that opts his pages in (frontmatter only: it
+    // reads BOARD_KEY_BY_SLUG, never the board).
+    expect(importers.sort()).toEqual([
+      'src/components/shared/MyRankingsPage.astro',
+      'src/components/shared/MyRanksMarker.astro',
+      'src/pages/api/my-ranks.ts',
+    ]);
+    for (const file of ['src/components/shared/MyRankingsPage.astro', 'src/components/shared/MyRanksMarker.astro']) {
+      expect(readFileSync(file, 'utf8'), file).not.toMatch(/<script/);
+    }
+    // The browser half reaches the ranks only through the gated API.
+    expect(readFileSync('src/utils/my-ranks-client.ts', 'utf8')).not.toMatch(/private-rankings['"]/);
   });
 });

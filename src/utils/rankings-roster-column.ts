@@ -11,6 +11,7 @@
  * empty column is worse than no column.
  */
 
+import type { MyRankKind } from './my-ranks';
 import {
   buildRankingLookup,
   onRankingsChanged,
@@ -18,6 +19,8 @@ import {
 } from './rankings-lookup';
 
 export interface RosterRankColumnOptions {
+  /** Which of the site owner's lists the column shows (my-ranks.ts); default `season`. */
+  kind?: MyRankKind;
   /**
    * Container(s) whose `tr[data-player-id]` rows get a rank, e.g.
    * `#rosterTableBody`. Every match is used — the AFL splits its roster across
@@ -49,7 +52,7 @@ function setColumnDisplay(selector: string, value: string): void {
 }
 
 function populate(options: RosterRankColumnOptions): RankingLookup {
-  const lookup = buildRankingLookup();
+  const lookup = buildRankingLookup(undefined, { kind: options.kind });
 
   // After a ClientRouter swap the previous page's module instance is still
   // alive and still answers `astro:page-load`. Its selectors can match the new

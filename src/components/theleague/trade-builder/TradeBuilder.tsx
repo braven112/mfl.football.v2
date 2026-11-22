@@ -243,9 +243,9 @@ export default function TradeBuilder({
   const [rankingLookup, setRankingLookup] = useState<RankingLookup | null>(null);
   useEffect(() => {
     if (!isAdmin) return;
-    setRankingLookup(buildRankingLookup());
+    setRankingLookup(buildRankingLookup(undefined, { kind: 'contract' }));
     return onRankingsChanged(() => {
-      setRankingLookup(buildRankingLookup());
+      setRankingLookup(buildRankingLookup(undefined, { kind: 'contract' }));
     });
   }, [isAdmin]);
 

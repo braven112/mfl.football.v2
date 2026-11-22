@@ -18,6 +18,7 @@
  * AFL page.
  */
 
+import type { MyRankKind } from './my-ranks';
 import {
   buildRankingLookup,
   onRankingsChanged,
@@ -26,6 +27,8 @@ import {
 } from './rankings-lookup';
 
 export interface RankingTableOptions {
+  /** Which of the site owner's lists this table shows (my-ranks.ts); default `season`. */
+  kind?: MyRankKind;
   /** The table to inject headers into, e.g. `.players-table`. */
   tableSelector: string;
   /** The `<th>` that ranking headers are inserted after, e.g. `[data-sort="weight"]`. */
@@ -116,6 +119,8 @@ export function rankingCellClasses(col: RankingColumn): string[] {
 
 /** Tooltip text for a ranking column header. */
 export function rankingHeaderTitle(col: RankingColumn, allColumns: RankingColumn[]): string {
+  // The site owner's own list names itself (fullName "My Rank · this week").
+  if (col.isOwnerList) return col.fullName;
   if (col.isComposite) {
     const members = allColumns.filter((c) => c.isCompositeMember).length;
     return `My Rank — weighted composite of ${members} ranking sources`;
@@ -140,7 +145,7 @@ function injectRankingColumns(options: RankingTableOptions): void {
   // (players.astro only restores it when there's no explicit preference).
   if (!document.querySelector(options.tableSelector)) return;
 
-  const lookup: RankingLookup = buildRankingLookup();
+  const lookup: RankingLookup = buildRankingLookup(undefined, { kind: options.kind });
 
   const limitedColumns = visibleRankingColumns(lookup.columns);
   const limitedLookup: RankingLookup = { ...lookup, columns: limitedColumns };

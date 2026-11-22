@@ -30,6 +30,8 @@ import {
   getCompositeConfig,
   isImportsStorageKey,
 } from './rankings-storage';
+import { myRankList } from './my-ranks-client';
+import type { MyRankKind } from './my-ranks';
 
 /** Synthetic importId used for the computed average rank column. */
 export const AVERAGE_IMPORT_ID = '__average__';
@@ -142,6 +144,8 @@ export interface RankingColumn {
   isAverage?: boolean;
   /** True only for the synthetic "My Rank" composite column */
   isComposite?: boolean;
+  /** True for the site owner's own list (my-ranks.ts) standing in as My Rank */
+  isOwnerList?: boolean;
   /** True for imports that are members of the active composite */
   isCompositeMember?: boolean;
   /** True for the last (rightmost) composite member — used for border styling */
@@ -162,7 +166,45 @@ export interface RankingLookup {
  * Pre-builds Map<playerId, rank> for each import for O(1) lookups.
  * Only includes matched players (those with non-null playerId).
  */
-export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLookup {
+export interface RankingLookupOptions {
+  /**
+   * Which of the site owner's lists this surface wants (src/utils/my-ranks.ts):
+   * Set Lineup asks for `week`, contract pages for `contract`, and so on.
+   * Ignored for every other viewer, who gets their stored board.
+   */
+  kind?: MyRankKind;
+}
+
+export function buildRankingLookup(imports?: StoredRankingImport[], options: RankingLookupOptions = {}): RankingLookup {
+  // The site owner's own ranks replace the board entirely: he sees only his
+  // number, under the same "My Rank" label (Brandon, 2026-11-22). Explicit
+  // `imports` (tests, the import editor's previews) are never overridden.
+  if (!imports) {
+    const mine = myRankList(options.kind ?? 'season');
+    if (mine === 'loading') return { byImport: new Map(), columns: [] };
+    if (mine) {
+      const map = new Map(Object.entries(mine.ranks));
+      return {
+        // Keyed as the composite: it IS "My Rank", and every surface that
+        // reads My Rank (trade builder, keeper sort, contract pages) asks for
+        // COMPOSITE_IMPORT_ID by name.
+        byImport: new Map([[COMPOSITE_IMPORT_ID, map]]),
+        columns: [
+          {
+            importId: COMPOSITE_IMPORT_ID,
+            source: 'custom',
+            type: 'overall',
+            header: 'My Rank',
+            fullName: `My Rank · ${mine.label}`,
+            playerCount: map.size,
+            importDate: '',
+            isComposite: true,
+            isOwnerList: true,
+          },
+        ],
+      };
+    }
+  }
   const allImports = imports ?? getAllImports();
 
   const byImport = new Map<string, Map<string, number>>();

@@ -52,6 +52,8 @@ export interface BoardPlayer {
     gap?: number;
     myPosRank?: number;
   };
+  /** Preseason (redraft) list, scraped June 1 – Labor Day only (brandon-fantasy). */
+  redraft?: { fbg?: number; posRank?: string; fp?: Consensus; gap?: number; myPosRank?: number };
 }
 
 export interface BoardFile {

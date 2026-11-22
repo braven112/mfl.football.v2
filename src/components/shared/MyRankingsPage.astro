@@ -14,6 +14,7 @@
  * sort as a row of pills.
  */
 import PlayerCell from './PlayerCell.astro';
+import MyRanksBlendForm from './MyRanksBlendForm.astro';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
@@ -21,6 +22,8 @@ import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { sameConference } from '../../utils/afl-conference';
 import { siteOwnerFranchise } from '../../utils/site-owner';
 import { BOARD_KEY_BY_SLUG, loadPrivateBoard } from '../../utils/private-rankings';
+import { blendKey, DEFAULT_BLEND_REDRAFT_PCT } from '../../utils/my-ranks';
+import { getRedis } from '../../utils/redis-client';
 import {
   buildView, freshnessLabel, parseViewQuery, viewHref, OWNERSHIP, POSITIONS, SORTS, VIEWS,
   type Consensus, type View, type ViewRow,
@@ -43,6 +46,16 @@ const fresh = Astro.url.searchParams.get('fresh') === '1';
 const path = Astro.url.pathname;
 
 const load = await loadPrivateBoard(boardKey, { fresh });
+
+// The Blend slider (my-ranks.ts): the redraft share of the auction / AFL
+// draft board. Only the number is stored.
+let blendPct = DEFAULT_BLEND_REDRAFT_PCT;
+try {
+  const v = Number(await (await getRedis())?.get(blendKey(boardSlug)));
+  if (Number.isFinite(v) && v >= 0 && v <= 100) blendPct = v;
+} catch {
+  /* the default stands */
+}
 
 // Who rosters each player, live from MFL (60 s Redis cache). In the AFL a
 // player is routinely on one team per conference; only the owner's own
@@ -147,6 +160,8 @@ const sourceLines = load.ok
       <a class="ui-tab mr-tab" href={viewHref(path, boardKey, q, { view: v })} aria-current={v === q.view ? 'page' : undefined}>{VIEW_LABELS[v]}</a>
     ))}
   </nav>
+
+  <MyRanksBlendForm slug={boardSlug} pct={blendPct} />
 
   {!load.ok ? (
     <div class="mr-empty" role="status">
@@ -316,6 +331,7 @@ const sourceLines = load.ok
     </>
   )}
 </section>
+
 
 <style>
   .mr {
