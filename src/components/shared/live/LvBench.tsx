@@ -23,7 +23,7 @@
  */
 import { useState, type JSX } from 'react';
 import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
-import LvLineup from './LvLineup';
+import LvLineup, { type LvRowDecoration } from './LvLineup';
 
 export interface LvBenchProps {
   side0: readonly LivePlayerRow[];
@@ -37,6 +37,10 @@ export interface LvBenchProps {
   onOpenPlayer?: (row: LivePlayerRow, side: 0 | 1) => void;
   /** No projections behind this matchup — see `LiveMatchup.noProjections`. */
   hideProjection?: boolean;
+  /** The disclosure's label. "Bench" on a fantasy matchup. */
+  label?: string;
+  /** Per-row extras — see `LvLineup`. */
+  decorate?: (row: LivePlayerRow) => LvRowDecoration | undefined;
 }
 
 export default function LvBench({
@@ -50,6 +54,8 @@ export default function LvBench({
   detailStatus,
   onOpenPlayer,
   hideProjection,
+  label = 'Bench',
+  decorate,
 }: LvBenchProps): JSX.Element | null {
   const [open, setOpen] = useState(false);
 
@@ -67,7 +73,7 @@ export default function LvBench({
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          <span className="lv-bench__label">Bench ({total})</span>
+          <span className="lv-bench__label">{label} ({total})</span>
           <span className="lv-bench__chev" aria-hidden="true" />
         </button>
       </div>
@@ -89,6 +95,7 @@ export default function LvBench({
               detailStatus={detailStatus}
               onOpenPlayer={onOpenPlayer}
               hideProjection={hideProjection}
+              decorate={decorate}
             />
           ) : (
             <div className="lv-bench__none">No bench players</div>

@@ -62,5 +62,6 @@ export const AllReasons = {
       createElement(LvEmptyState, { key: 'b', reason: 'no-matchup' }),
       createElement(LvEmptyState, { key: 'c', reason: 'unavailable', leagueName: 'AFL Fantasy' }),
       createElement(LvEmptyState, { key: 'd', reason: 'pre-season' }),
+      createElement(LvEmptyState, { key: 'e', reason: 'not-scheduled' }),
     ),
 };

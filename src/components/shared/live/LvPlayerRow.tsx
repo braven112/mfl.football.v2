@@ -61,6 +61,8 @@ import {
 } from '../../../utils/nfl-team-colors';
 import { isUnresolvedPlayerId } from '../../../utils/sleeper/ids';
 import { useScoreFormat } from './score-format';
+import LvMark from './LvMark';
+import type { NflGameOwner } from '../../../utils/live/nfl-game-players';
 
 export interface LvPlayerRowProps {
   row: LivePlayerRow;
@@ -87,6 +89,15 @@ export interface LvPlayerRowProps {
    * would only repeat the live score. Dropped rather than printed.
    */
   hideProjection?: boolean;
+  /**
+   * The fantasy team(s) he is on — the NFL game drill-in only, where a row is
+   * a player in a real game rather than a slot in somebody's lineup. A LIST:
+   * the AFL rosters one player in both conferences. Omitted on every fantasy
+   * lineup, where the side of the pair already says whose he is.
+   */
+  owners?: readonly NflGameOwner[];
+  /** On no roster in the league (NFL game drill-in only). */
+  freeAgent?: boolean;
 }
 
 /**
@@ -108,6 +119,8 @@ export default function LvPlayerRow({
   detailStatus = 'ok',
   onOpen,
   hideProjection = false,
+  owners,
+  freeAgent = false,
 }: LvPlayerRowProps): JSX.Element {
   // The league's own MFL setting, so every number matches MFL's.
   const fmt = useScoreFormat();
@@ -182,11 +195,25 @@ export default function LvPlayerRow({
    */
   const teamLabel = isDef ? '' : team;
 
+  /**
+   * Whose he is, as a small mark on the corner of his headshot: the row's
+   * geometry is already spoken for (see the header), and a league's owners
+   * know each other's marks at a glance. The names ride the accessible label
+   * and the tooltip. `mine` takes the faint highlight the viewer's own rows
+   * get everywhere — a tint, never a stripe.
+   */
+  const ownerList = owners ?? [];
+  const mine = ownerList.some((o) => o.mine);
+  const ownerNames = ownerList.map((o) => o.nameShort || o.name).join(' and ');
+  const label = `${meta?.name ?? `Player ${row.id}`}${
+    ownerNames ? ` (${ownerNames})` : freeAgent ? ' (free agent)' : ''
+  }`;
+
   return (
     <div
       className={`lv-prow${side === 'right' ? ' lv-prow--right' : ''}${
         redZone ? ' lv-prow--redzone' : ''
-      }${onOpen ? ' lv-prow--open' : ''}`}
+      }${onOpen ? ' lv-prow--open' : ''}${mine ? ' lv-prow--mine' : ''}`}
       /* A div with button semantics rather than a <button>: the row is a
          subgrid item whose tracks the paired side shares, and a <button>
          brings UA box styling that the matchup card already had to fight. */
@@ -195,7 +222,7 @@ export default function LvPlayerRow({
             role: 'button',
             tabIndex: 0,
             'aria-haspopup': 'dialog' as const,
-            'aria-label': `${meta?.name ?? `Player ${row.id}`}: ${fmt(row.live)} points — show scoring details`,
+            'aria-label': `${label}: ${fmt(row.live)} points — show scoring details`,
             onClick: onOpen,
             onKeyDown: (e: { key: string; preventDefault: () => void }) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -236,6 +263,21 @@ export default function LvPlayerRow({
             )
           : meta?.headshot && <img src={meta.headshot} alt="" loading="lazy" />}
       </span>
+      {ownerList.length > 0 && (
+        <span className="lv-powners" title={ownerNames} aria-hidden="true">
+          {ownerList.slice(0, 2).map((o) => (
+            <LvMark
+              key={o.franchiseId}
+              icon={o.icon}
+              alt=""
+              initials={o.initials}
+              crop={o.crop}
+              decorative
+              classes={{ wrap: 'lv-powner', crop: 'lv-powner--crop', text: 'lv-powner--text' }}
+            />
+          ))}
+        </span>
+      )}
 
       <span className="lv-pid">
         <span className="lv-pname">{meta?.name ?? `Player ${row.id}`}</span>
@@ -282,6 +324,11 @@ export default function LvPlayerRow({
           {isUnresolvedPlayerId(row.id) && (
             <span className="lv-punmatched" title="Not matched to an MFL player yet">
               Unmatched
+            </span>
+          )}
+          {freeAgent && (
+            <span className="lv-pfa" title="Free agent">
+              FA
             </span>
           )}
           {redZone && <span className="lv-rz">RED ZONE</span>}
