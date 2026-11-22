@@ -12,10 +12,9 @@
  * and `shared/free-agents/FreeAgentsPage.astro` (AFL + custom leagues) are near-identical siblings, and a ranking
  * fix landing in one and not the other is a recurring bug class in this repo.
  *
- * Deliberately does NOT read localStorage itself: `buildRankingLookup()`
- * defaults to `getAllImports()`, which is already league-scoped by
- * `rankings-scope.ts`. Reaching around it would read TheLeague's board on an
- * AFL page.
+ * The list itself comes from `buildRankingLookup()` (my-ranks-client.ts),
+ * which reads the league per call, so a ClientRouter swap to another league
+ * never shows the previous league's board.
  */
 
 import type { MyRankKind } from './my-ranks';
@@ -212,7 +211,7 @@ function injectRankingColumns(options: RankingTableOptions): void {
 
   const kind = chosenKind(options);
   syncKindToggle(options, kind);
-  const lookup: RankingLookup = buildRankingLookup(undefined, { kind });
+  const lookup: RankingLookup = buildRankingLookup({ kind });
 
   const limitedColumns = visibleRankingColumns(lookup.columns);
   const limitedLookup: RankingLookup = { ...lookup, columns: limitedColumns };

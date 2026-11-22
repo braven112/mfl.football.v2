@@ -80,22 +80,6 @@ export const DRAFT_PAGES: DraftPage[] = [
     blurb: 'Practice the draft against the clock before it counts.',
     leagues: BOTH,
   },
-  {
-    key: 'import-rankings',
-    label: 'Import Rankings',
-    shortLabel: 'Rankings',
-    path: '/import-rankings',
-    blurb: 'Bring your own rankings in, or use the built-in sources.',
-    leagues: BOTH,
-  },
-  {
-    key: 'custom-rankings',
-    label: 'My Draft List',
-    shortLabel: 'My List',
-    path: '/cr',
-    blurb: 'Your own board, ordered your way, ready for draft day.',
-    leagues: BOTH,
-  },
 ];
 
 /**

@@ -5,8 +5,7 @@
  *
  * Sequential (must run first, in order):
  *   1. build:styles
- *   2. build:bookmarklets
- *   3. update:salary:all
+ *   2. update:salary:all
  *
  * Parallel (independent network fetches, run concurrently after sequential):
  *   - fetch:live:lineups
@@ -61,7 +60,6 @@ const SEQUENTIAL = [
   // Never previewSkip — a preview without it runs Roger on the public stubs.
   { name: 'fetch:beat-reporter', cmd: 'node scripts/fetch-beat-reporter.mjs', fatal: true },
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
-  { name: 'build:bookmarklets', cmd: 'pnpm run build:bookmarklets' },
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
   // The franchise-history derived chain also runs here, step by step, because
   // the build needs the files and nothing here commits anything. The lanes that

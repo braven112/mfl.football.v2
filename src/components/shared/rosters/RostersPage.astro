@@ -158,8 +158,6 @@ interface Props {
   tradeBuilder: boolean;
   /** Link under the controls bar for the club on screen (franchise history, brand page…). */
   franchiseLink?: ((franchiseId: string) => { href: string; label: string } | null) | null;
-  /** The league has an Import Rankings page — the My Rank board picker links to it. */
-  rankingsPage: boolean;
   /** The league has a schedule page — the gameday tiles link to it. */
   schedulePage: boolean;
   /** Sign-in dialog branding. */
@@ -181,7 +179,6 @@ const {
   tradeBuilder,
   franchiseLink = null,
   schedulePage,
-  rankingsPage,
   signIn,
   leagueLabel,
 } = Astro.props;
@@ -1139,7 +1136,6 @@ const pageConfig = {
         years={availableYears}
         selectedYear={selectedYear}
         selectId="year-select"
-        rankingsLeague={rankingsPage ? league.navSlug : null}
       />
       {/* Grouped | All players (position-groups.ts) and, on a phone, the
           sort chips built from the table's own sortable headers. */}

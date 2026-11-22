@@ -7,7 +7,7 @@
  *                                    written straight through to MFL, then
  *                                    the mirror is updated
  *
- * Auth is the SESSION's own MFL cookie (`user.id`), exactly as /api/draft-list:
+ * Auth is the SESSION's own MFL cookie (`user.id`):
  * MFL's myWatchList import refuses APIKEYs and exposes no FRANCHISE_ID, so the
  * franchise is whoever the cookie belongs to. Every owner may use this for
  * their OWN list and can reach nobody else's.
@@ -48,8 +48,8 @@ function resolveContext(request: Request) {
   const league = user.leagueId ? getLeagueById(user.leagueId) : null;
   if (!league) return unauthorized({ error: 'This session has no recognized league.' });
 
-  // `?league=` is a CHECK, never an input — see /api/draft-list and
-  // kv-franchise-store for why a cross-league page must be refused.
+  // `?league=` is a CHECK, never an input — see
+  // CLAUDE.md "Rankings are per-league" for why a cross-league page must be refused.
   const scope = rankingsScopeForLeagueId(user.leagueId);
   const requested = new URL(request.url).searchParams.get('league');
   if (requested && requested !== scope) {

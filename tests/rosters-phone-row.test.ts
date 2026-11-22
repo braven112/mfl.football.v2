@@ -301,9 +301,10 @@ describe('the phone sort chips (idea B)', () => {
     expect(CSS).toMatch(/^\.rsim-bar,\s*\.rr-chips,\s*\.rr-ph \{\s*display: none;/m);
   });
 
-  // Year + My Rank sit behind one sliders button on a phone, in BOTH
+  // The Year picker sits behind one sliders button on a phone, in BOTH
   // leagues (user, 2026-10-29): one shared control, named for what it opens.
-  it('Year and My Rank share one sliders button on a phone, in every league', () => {
+  // (My Rank's sources editor shared it until it was retired, 2026-11-22.)
+  it('the Year picker sits behind one sliders button on a phone, in every league', () => {
     const shared = fs.readFileSync(
       path.join(process.cwd(), 'src/components/shared/rosters/RostersPage.astro'),
       'utf8',
@@ -316,8 +317,8 @@ describe('the phone sort chips (idea B)', () => {
       path.join(process.cwd(), 'src/components/shared/rosters/RosterOptions.astro'),
       'utf8',
     );
-    expect(options).toContain('aria-label="Roster options: year and My Rank sources"');
-    expect(options).toContain('<MyRankEditor league={rankingsLeague} />');
+    expect(options).toContain('aria-label="Roster options: year"');
+    expect(options).not.toContain('MyRankEditor');
   });
 });
 

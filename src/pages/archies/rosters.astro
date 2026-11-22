@@ -87,7 +87,6 @@ const teamById = new Map(config.teams.map((t) => [t.franchiseId, t]));
   divisions={config.divisions}
   rosterSize={rosterSize}
   tradeBuilder={true}
-  rankingsPage={true}
   schedulePage={false}
   franchiseLink={(id: string) => {
     const team = teamById.get(id);

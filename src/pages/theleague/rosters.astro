@@ -1967,7 +1967,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             years={seasonOptions}
             selectedYear={defaultSeason}
             selectId="rosterSeasonSelect"
-            rankingsLeague="theleague"
           />
 
           {/* Phone only (idea B, user 2026-09-26): one scrolling row of sort
@@ -4469,7 +4468,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   /* Season total — the darker of the season pair, so Total reads as the figure
      and Avg as its rate. --color-gray-900, not --content-text: the latter is
      not a token here, and an undefined var renders its light fallback in dark
-     mode too (same note as src/styles/my-rank-editor.css). */
+     mode too. */
   :global(.total-points) {
     font-weight: 700;
     color: var(--color-gray-900, #111827);

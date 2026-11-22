@@ -1,9 +1,9 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-11-16",
+  "recordedAt": "2026-11-22",
   "totals": {
-    "transition": 184,
-    "fontSize": 1862,
+    "transition": 169,
+    "fontSize": 1791,
     "shadow": 204
   },
   "files": {
@@ -98,6 +98,9 @@
     },
     "src/components/shared/Breadcrumbs.astro": {
       "fontSize": 1
+    },
+    "src/components/shared/BreakingStoryHero.astro": {
+      "fontSize": 5
     },
     "src/components/shared/ChartCard.astro": {
       "fontSize": 4
@@ -335,10 +338,6 @@
     "src/components/shared/PrivateDocView.astro": {
       "fontSize": 4
     },
-    "src/components/shared/rankings-import/ImportRankingsPage.astro": {
-      "transition": 6,
-      "fontSize": 44
-    },
     "src/components/shared/roster-header/GamedayBar.astro": {
       "transition": 2,
       "fontSize": 6
@@ -472,9 +471,6 @@
     "src/components/theleague/BarChart.astro": {
       "fontSize": 1
     },
-    "src/components/shared/BreakingStoryHero.astro": {
-      "fontSize": 5
-    },
     "src/components/theleague/CalendarEventCard.astro": {
       "fontSize": 11,
       "shadow": 4
@@ -576,9 +572,6 @@
     "src/components/theleague/PositionalRankingHeatmap.astro": {
       "transition": 1,
       "fontSize": 5
-    },
-    "src/components/theleague/RankingsImporter.astro": {
-      "transition": 1
     },
     "src/components/theleague/RelatedReports.astro": {
       "fontSize": 1
@@ -716,7 +709,7 @@
       "fontSize": 7
     },
     "src/pages/best-ball-1/mock-draft/index.astro": {
-      "fontSize": 7
+      "fontSize": 6
     },
     "src/pages/best-ball-1/rosters.astro": {
       "fontSize": 5
@@ -822,7 +815,7 @@
     },
     "src/pages/theleague/players.astro": {
       "transition": 9,
-      "fontSize": 24,
+      "fontSize": 23,
       "shadow": 6
     },
     "src/pages/theleague/playoff-performance.astro": {
@@ -857,10 +850,6 @@
     },
     "src/styles/composite-panel-board.css": {
       "fontSize": 6
-    },
-    "src/styles/custom-rankings.css": {
-      "transition": 7,
-      "fontSize": 19
     },
     "src/styles/draft-broadcast.css": {
       "transition": 3,
@@ -905,10 +894,6 @@
     "src/styles/mfl-live.css": {
       "fontSize": 7,
       "shadow": 1
-    },
-    "src/styles/my-rank-editor.css": {
-      "transition": 1,
-      "fontSize": 6
     },
     "src/styles/network-badge.css": {
       "fontSize": 1

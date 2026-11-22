@@ -48,7 +48,6 @@ import { isDraftComplete } from '../../utils/draft-utils';
 import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
-import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -1046,9 +1045,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
-        {/* An action, not a view like Watch List — belongs with Projected
-            FAs / Filters, not the Stats/Auction/Value toggles. */}
-        <MyRankEditor league="theleague" />
         {/* aria-label carries the full "See projected FAs" regardless of
             breakpoint — "See " visually dropping via CSS at narrow widths
             would otherwise drop it from the accessible name too, since
@@ -3791,16 +3787,6 @@ const spriteUrl = spriteUrlFor(Astro.url);
     align-items: center;
     gap: 0.3rem;
   }
-  /* MyRankEditor's .mre-trigger is rendered by a child component, so a
-     scoped selector alone never reaches it — needs :global(). Matches
-     .hero-cross-link / .filter-toggle-btn's size, which .toolbar-right now
-     sits it beside, instead of the smaller pill chips its default style
-     was designed to match in #col-group-toggles. */
-  .toolbar-right :global(.mre-trigger) {
-    padding: 0.4rem 0.85rem;
-    border-radius: var(--radius-md, 0.5rem);
-    font-size: 0.8125rem;
-  }
   .col-group-btn__icon {
     width: 12px;
     height: 12px;
@@ -4398,12 +4384,8 @@ const spriteUrl = spriteUrlFor(Astro.url);
        right with dead space on the left — matches AFL's own mobile
        .toolbar-right, which already uses space-between. */
     .toolbar-right { order: 3; justify-content: space-between; flex-wrap: wrap; gap: 0.3rem; width: 100%; }
-    /* Tightened so My Rank + See projected FAs + Filters share one line down
-       to 320px (a plain 375-390px fit wrapped Filters to a third row on a
-       320px phone — Copilot review on PR #1057, confirmed with a real
-       render). My Rank is hidden until 2+ imports; when it isn't shown the
-       other two fit with room to spare. */
-    .toolbar-right :global(.mre-trigger),
+    /* Tightened so See projected FAs + Filters share one line down to 320px
+       (Copilot review on PR #1057, confirmed with a real render). */
     .toolbar-right .hero-cross-link,
     .toolbar-right .filter-toggle-btn {
       padding: 0.3rem 0.5rem;

@@ -22,7 +22,6 @@
     "src/components/shared/live-broadcast/LiveBroadcast.tsx::lbc__demo-badge": "Fork: positioned overlay (counter bubble); a corner marker on another element, not an inline badge.",
     "src/components/shared/live/LvMatchupCard.tsx::lv-badge": "Not a badge: a text label with no padding and no rounded ground.",
     "src/components/shared/playoffs/PlayoffsPage.astro::status-pill": "Backlog: font-size set by another rule; not migrated mechanically yet.",
-    "src/components/shared/rankings-import/BookmarkletCard.tsx::bm-card__badge": "Fork: shares no property with the kit. Its own look for this page; adopt the kit only if the owner wants it to change.",
     "src/components/shared/rosters/RostersPage.astro::rank-badge": "Backlog: 2 base rules; not migrated mechanically yet.",
     "src/components/shared/standings/StandingsTable.astro::seed-badge": "Backlog: a sibling copy of src/components/shared/playoffs/PlayoffsPage.astro, which is migrated; this copy keeps its own rule until the pages are unforked.",
     "src/components/shared/standings/StandingsTable.astro::sh-badge": "Backlog: no single base rule styles this class in this file; not migrated yet.",

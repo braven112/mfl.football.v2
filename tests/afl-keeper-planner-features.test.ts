@@ -68,7 +68,7 @@ describe('KeeperPlanner decision-support features', () => {
     expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/rankings-lookup'/);
     // No imports argument: the shared, league-scoped store (and, for the site
     // owner, his own blend list — src/utils/my-ranks.ts).
-    expect(SRC).toMatch(/buildRankingLookup\((?:undefined, \{ kind: 'blend' \})?\)/);
+    expect(SRC).toMatch(/buildRankingLookup\(\{ kind: 'blend' \}\)/);
     expect(SRC).toMatch(/COMPOSITE_IMPORT_ID/);
     // Falls back to the server-rendered position/name order when there's no
     // composite yet — never leaves the list empty or unsorted-looking.

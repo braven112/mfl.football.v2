@@ -1,20 +1,18 @@
 ---
 /**
- * The Rosters page's Year picker and My Rank sources, behind ONE sliders
+ * The Rosters page's Year picker, behind ONE sliders
  * button on a phone (user, 2026-10-29: "hide the year switcher behind the
  * filter icon ... in both leagues"). Above the phone breakpoint the button is
- * gone and the two controls sit inline, as they always did.
+ * gone and the picker sits inline, as it always did.
  *
  * Every league's Rosters page renders this, so the year picker looks and
  * behaves the same everywhere; what a year CHANGE does stays the page's own
  * (TheLeague swaps the season in place, the shared page navigates to
  * `?year=`), wired to the select by `selectId`.
  *
- * My Rank keeps its own trigger (MyRankEditor), which hides itself until the
- * owner has two boards to blend; in the menu it shows as a labelled row.
+ * The My Rank sources editor used to share this menu; it was retired with
+ * Import Rankings on 2026-11-22 (one built-in board for every owner).
  */
-import MyRankEditor from '../rankings/MyRankEditor.astro';
-import type { LeagueSlug } from '../../../types/nav';
 
 interface Props {
   /** Seasons in the picker, newest first. */
@@ -22,11 +20,9 @@ interface Props {
   selectedYear: string | number;
   /** The select's id — the page's season handler binds to it. */
   selectId: string;
-  /** The league's nav slug for My Rank; omit when the league has no rankings page. */
-  rankingsLeague?: LeagueSlug | null;
 }
 
-const { years, selectedYear, selectId, rankingsLeague = null } = Astro.props;
+const { years, selectedYear, selectId } = Astro.props;
 const panelId = `${selectId}-options`;
 ---
 
@@ -37,7 +33,7 @@ const panelId = `${selectId}-options`;
     data-roster-options-toggle
     aria-expanded="false"
     aria-controls={panelId}
-    aria-label="Roster options: year and My Rank sources"
+    aria-label="Roster options: year"
   >
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
          stroke-linecap="round" aria-hidden="true">
@@ -56,7 +52,6 @@ const panelId = `${selectId}-options`;
         </select>
       </span>
     </div>
-    {rankingsLeague && <MyRankEditor league={rankingsLeague} />}
   </div>
 </div>
 
@@ -177,14 +172,6 @@ const panelId = `${selectId}-options`;
       min-height: var(--touch-target-min, 44px);
       font-size: var(--font-size-base);
     }
-
-    /* In the menu, My Rank is a labelled row rather than a floating pill. */
-    .roster-options__panel :global(.mre-trigger:not([hidden])) {
-      align-self: stretch;
-      justify-content: center;
-      min-height: var(--touch-target-min, 44px);
-      font-size: var(--font-size-sm);
-    }
   }
 
   html.dark .roster-options__toggle {
@@ -218,11 +205,6 @@ const panelId = `${selectId}-options`;
         closeAll(root);
         root.toggleAttribute('data-open', open);
         toggle.setAttribute('aria-expanded', String(open));
-        return;
-      }
-      // Choosing My Rank opens its own dialog; tidy the menu away first.
-      if (target.closest('[data-roster-options] [data-mre-trigger]')) {
-        closeAll();
         return;
       }
       if (!target.closest('[data-roster-options]')) closeAll();

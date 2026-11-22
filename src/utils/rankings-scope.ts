@@ -1,9 +1,10 @@
 /**
  * Rankings scope — which bucket of rankings a league reads and writes.
  *
- * Both halves of the rankings system (Import Rankings → composite "My Rank",
- * and the Custom Rankings drag-and-drop board) are per-owner data, and an
- * owner's board is NOT the same board in every league: the AFL is a keeper
+ * It began as the bucket for owners' ranking boards (Import Rankings and the
+ * Custom Rankings board, both retired 2026-11-22); the watch list, claims and
+ * other per-owner stores now key through it too. Per-owner data is NOT the
+ * same in every league: the AFL is a keeper
  * league with its own player pool and scoring, so its ranking of a player is
  * a different opinion than TheLeague's dynasty-contract ranking of the same
  * player. The scope is what keeps those from overwriting each other.
@@ -36,10 +37,7 @@ export const DEFAULT_RANKINGS_SCOPE: RankingsScope = 'theleague';
  *
  * BEST_BALL: bb1 previously shared TheLeague's bucket so an owner's imports fed
  * both draft queues. That is no longer wanted — a best-ball board is its own
- * board (commissioner, 2026-08-20). The original objection to splitting was
- * that it would leave best-ball owners with an empty queue; the built-in
- * sources (src/utils/rankings-storage.ts#syncBuiltinImports) now seed a
- * working composite on first load, so a fresh bucket starts populated instead.
+ * board (commissioner, 2026-08-20).
  */
 function registeredScope(navSlug: string): RankingsScope | null {
   return ALL_LEAGUES.find((l) => l.navSlug === navSlug)?.navSlug ?? null;

@@ -46,8 +46,6 @@ const ALLOWED: Record<string, string> = {
     'Admin toolbar chip (pin/lock/archive/issue link) styled as a set with toggle <button>s; SuggestionBoxPage restates colour and decoration on :hover.',
   'src/components/nav/NavHeader.astro::nav-header__switch-btn':
     'Nav league-switcher icon button: no text to underline, and its scoped :hover restates colour.',
-  'src/components/shared/rankings-import/BookmarkletCard.tsx::bm-card__rankings-btn':
-    'Colour-coded source chips (dynasty/redraft/ADP/overall), not CTAs; ImportRankingsPage restates colour and decoration on :hover/:focus.',
 };
 
 /**

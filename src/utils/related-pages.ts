@@ -67,14 +67,12 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
       { path: '/front-office', title: 'Front Office', blurb: "Next season's plan in one place: cap space, contracts and trades.", cta: 'Open the Front Office' },
       { path: '/keepers', title: 'Keepers', blurb: 'Declare the players you protect before the keeper deadline.', cta: 'Set my keepers', only: ['afl-fantasy'] },
       { path: '/keeper-analysis', title: 'Keeper Report Card', blurb: "Every keeper class graded in hindsight against this season's points.", cta: 'See the grades', only: ['afl-fantasy'] },
-      { path: '/import-rankings', title: 'Import Rankings', blurb: 'Bring in rankings from the sites you trust to power your boards.', cta: 'Import rankings' },
     ],
   },
   '/players': {
     heading: 'More on the wire',
     pages: [
       { path: '/transactions', title: 'Transactions', blurb: "Every signing, waiver claim and drop around the league — see who's been grabbed before you bid.", cta: 'See the moves' },
-      { path: '/import-rankings', title: 'Import Rankings', blurb: 'Bring in rankings from the sites you trust; they become a column on this page.', cta: 'Import rankings' },
     ],
   },
   '/franchises': {

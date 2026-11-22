@@ -230,8 +230,7 @@
         "src/pages/best-ball-1/draft-*.astro",
         "src/utils/draft*",
         "src/utils/*mock-draft*",
-        "src/pages/api/draft/**",
-        "src/pages/api/draft-list.ts"
+        "src/pages/api/draft/**"
       ],
       "tests": [
         "tests/draft-status-units.test.ts",
@@ -806,17 +805,16 @@
       "name": "rankings",
       "paths": [
         "src/utils/rankings-*",
-        "src/utils/custom-rankings*",
-        "src/pages/api/ri.ts",
-        "src/pages/api/cr.ts",
-        "src/pages/*/cr.astro"
+        "src/utils/my-ranks*",
+        "src/utils/default-ranks.ts",
+        "src/pages/api/my-ranks.ts",
+        "src/pages/api/default-ranks.ts"
       ],
       "note": "Rankings are per-league; rankings-scope.ts owns every storage key. See CLAUDE.md \"Rankings are per-league\".",
       "tests": [
         "tests/rankings-scope.test.ts",
         "tests/rankings-lookup.test.ts",
-        "tests/rankings-storage.test.ts",
-        "tests/custom-rankings-seeding.test.ts"
+        "tests/my-ranks.test.ts"
       ]
     },
     {
@@ -1019,7 +1017,6 @@
         "src/utils/mfl-*.ts",
         "src/utils/lineup-route.ts",
         "src/pages/api/watch-list.ts",
-        "src/pages/api/draft-list.ts",
         "src/pages/api/cut-player.ts",
         "src/pages/api/waiver-claim.ts",
         "src/pages/api/waiver-claims.ts",

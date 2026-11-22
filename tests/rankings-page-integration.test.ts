@@ -309,110 +309,15 @@ describe('rankings reach every decision page', () => {
     });
   });
 
-  describe('My Rank editor', () => {
-    // Re-weighting the composite used to mean leaving the page for Import
-    // Rankings and coming back. Every page that SHOWS the composite should be
-    // able to edit it.
-
-    it.each(FREE_AGENT_PAGES)('%s mounts the editor', (page) => {
-      const src = read(page);
-      expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
-      // A literal nav slug, or the shared Free Agents / rosters page's
-      // registry lookup (those pages serve several leagues).
-      expect(src).toMatch(/<MyRankEditor\s+league=(?:"(theleague|afl)"|\{league\.navSlug\})/);
-    });
-
-    it.each(ROSTER_PAGES)('%s mounts the editor inside the roster options', (page) => {
-      // Rosters put Year and My Rank behind one sliders button on a phone, so
-      // the editor arrives through RosterOptions, which must still mount it.
-      const src = read(page);
-      expect(src).toContain('RosterOptions.astro');
-      expect(src).toMatch(/<RosterOptions[^>]*rankingsLeague=(?:"(theleague|afl)"|\{[^}]*league\.navSlug[^}]*\})/);
-      const options = read('src/components/shared/rosters/RosterOptions.astro');
-      expect(options).toContain('../rankings/MyRankEditor.astro');
-      expect(options).toContain('<MyRankEditor league={rankingsLeague} />');
-    });
-
-    it.each(FREE_AGENT_PAGES)('%s keeps the trigger out of the View group', (page) => {
-      // My Rank opens a dialog; it is not a fourth view. Sitting inside the
-      // "View:" pill group it read as one.
-      const src = read(page);
-      const toggles = src.slice(
-        src.indexOf('class="col-group-toggles"'),
-        src.indexOf('</div>', src.indexOf('class="col-group-toggles"')),
-      );
-      expect(toggles).not.toContain('MyRankEditor');
-    });
-
-    it('the editor writes only through the storage helpers', () => {
-      // The rebalance-to-100 rule and the `rankingsUpdated` broadcast live in
-      // rankings-storage.ts. A second implementation here would drift from it
-      // and leave the host page's columns stale.
-      const src = read('src/components/shared/rankings/MyRankEditor.tsx');
-      expect(src).toContain('toggleCompositeImport');
-      expect(src).toContain('setCompositeWeight');
-      expect(src).not.toMatch(/localStorage\.(set|get)Item/);
-    });
-
-    it('the editor is client:only, never hydrated', () => {
-      // The component returns null until it is opened, so SSR emits an EMPTY
-      // <astro-island> and a hydrating directive then asks React to hydrate a
-      // root that had no server output — which React 19 reports as a mismatch
-      // (#418) on every single page load. It shipped that way once. There is
-      // nothing to hydrate here anyway: the modal is always closed on first
-      // paint and its contents come from localStorage.
-      const src = read('src/components/shared/rankings/MyRankEditor.astro');
-      expect(src).toContain('client:only="react"');
-      // Strip comments first — the directive is explained in prose right above
-      // the tag, and that prose names the directive it is warning against.
-      const code = src
-        .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\/\/[^\n]*/g, '');
-      expect(code).not.toMatch(/client:(load|idle|visible)/);
-    });
-
-    it('the trigger retries until the island answers', () => {
-      // The button is plain HTML and works from first paint; the island
-      // arrives whenever its chunk does. Without the retry a fast click lands
-      // before the listener exists and the button silently does nothing.
-      expect(read('src/components/shared/rankings/MyRankEditor.astro')).toContain('detail.handled');
-      expect(read('src/components/shared/rankings/MyRankEditor.tsx')).toContain('detail.handled = true');
-    });
-
-    it('the editor derives its Import Rankings link from the registry', () => {
-      // A hardcoded '/theleague/import-rankings' sends AFL owners to the wrong
-      // league's board — and tests/league-literal-guard.test.ts would not see
-      // it, because the slug is not one of the literals it scans for.
-      const src = read('src/components/shared/rankings/MyRankEditor.astro');
-      expect(src).toContain('getLeaguePrefix(');
-      expect(src).toContain('resolveLeaguePath(');
-      expect(src).not.toMatch(/["'`]\/(theleague|afl-fantasy)\/import-rankings/);
-    });
-  });
-
-  it('no page reads a ranking board without going through the scoped helpers', () => {
-    // buildRankingLookup() defaults to getAllImports(), which rankings-scope.ts
-    // has already pointed at this league's bucket. A page that builds its own
-    // lookup from a raw localStorage read gets TheLeague's board on every page.
-    // (tests/rankings-scope.test.ts pins the key literals; this pins the shape.)
-    for (const page of [...FREE_AGENT_PAGES, ...ROSTER_PAGES, ...LINEUP_PAGES]) {
-      expect(read(page), `${page} parses rankings storage directly`).not.toMatch(
-        /localStorage\.getItem\(\s*['"`]rankings/,
-      );
-    }
-  });
 });
 
-describe('Saved Rankings table layout', () => {
-  // `display: flex` on a <td> takes the cell out of the table's column layout:
-  // it stops aligning with its header and draws its border-bottom across its
-  // own box instead of the row, which showed up as a stray line under the
-  // Actions column. Space the buttons on the children instead.
-  it('never makes a table cell a flex container', () => {
-    const css = readFileSync('src/components/shared/rankings-import/ImportRankingsPage.astro', 'utf8');
-    const block = css.slice(css.indexOf('.ri-manage__actions {'));
-    const decls = block.slice(0, block.indexOf('}'));
-    expect(decls).not.toMatch(/display:\s*(flex|grid|inline-flex)/);
-  });
+describe('the retired My Rank editor stays retired', () => {
+  // Owners get one built-in board (FantasySharks) and nothing to arrange; the
+  // site owner tunes his own on My Rankings (Brandon, 2026-11-22).
+  it.each([...FREE_AGENT_PAGES, ...ROSTER_PAGES, 'src/components/shared/rosters/RosterOptions.astro'])(
+    '%s mounts no editor',
+    (page) => {
+      expect(read(page)).not.toContain('MyRankEditor');
+    },
+  );
 });
