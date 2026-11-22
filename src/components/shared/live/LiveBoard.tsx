@@ -45,6 +45,7 @@ import {
   type PanelMemory,
 } from '../../../utils/live/stale';
 import { orderPanelMatchups, pairingKey, selectMatchupMoments } from '../../../utils/live/model';
+import { LIVE_MATCHUP_PARAM } from '../../../utils/live/matchup-link';
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
 import type { FeedSnapshot, KickoffClock } from '../../../utils/live-scoring-view';
@@ -282,6 +283,33 @@ export default function LiveBoard({
    * right panel AND to select the ticker's rows.
    */
   const [selected, setSelected] = useState<{ leagueId: string; pairing: string } | null>(null);
+  /**
+   * A link that names ONE game (`?matchup=`, the homepage scoreboard's cards)
+   * opens it on arrival. Read once, after hydration — the server render is the
+   * board either way, so there is nothing to mismatch — and only against the
+   * board this island was handed. Not found (last week's link, a typo): the
+   * board, exactly as without the parameter.
+   *
+   * The parameter is then dropped from the address bar, so Back from the
+   * drill-in followed by a reload shows the board rather than re-opening the
+   * game the reader just closed.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const wanted = url.searchParams.get(LIVE_MATCHUP_PARAM);
+    if (!wanted) return;
+    for (const panel of initialBoard.panels) {
+      const hit = panel.matchups.find((m) => pairingKey(m) === wanted);
+      if (hit) {
+        setSelected({ leagueId: panel.leagueId, pairing: wanted });
+        break;
+      }
+    }
+    url.searchParams.delete(LIVE_MATCHUP_PARAM);
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
   /**
    * Opening a matchup swaps the board for its detail IN PLACE, so the page
    * kept the board's scroll position: from low on a long board (the demo's

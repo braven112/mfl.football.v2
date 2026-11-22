@@ -17,6 +17,10 @@ import { getCurrentSeasonYear } from './league-year';
 import { loadLiveScoringPayload } from './live-scoring-source';
 import { hasLiveSignal } from './live-scoring-snapshot';
 import type { LiveScoringHeroProps, MatchupPairing, TeamInfo } from '../types/live-scoring';
+import { strictThrowbackScopeForLeagueSlug } from './throwback-scope';
+import { applyThrowbackToBoard } from './throwback-live-scoring';
+import { getLeagueTeamConfigs } from './league-team-brands';
+import type { ConfigTeam } from './live-scoring-data';
 
 /** The brand fields a teams map needs, as both leagues' configs already carry them. */
 export interface LiveScoringTeamSource {
@@ -48,6 +52,53 @@ export interface BuildLiveScoringHeroPropsInput {
   scopeFranchiseIds?: string[];
   /** Injectable for tests; defaults to the real MFL read. */
   loadImpl?: typeof loadLiveScoringPayload;
+  /** Injectable for tests; defaults to the real Throwback Week resolution. */
+  throwbackImpl?: typeof applyThrowbackToBoard;
+}
+
+/** The identity fields an era replaces on the card. */
+type EraIdentity = Pick<TeamInfo, 'name' | 'nameMedium' | 'nameShort' | 'abbrev' | 'icon'>;
+
+/**
+ * Throwback Week's era identity for every franchise, or null outside it.
+ *
+ * The SAME chokepoint the live-scoring board uses (`applyThrowbackToBoard`),
+ * so the homepage card and the board it links to never disagree about which
+ * crest a team is wearing. Before this the card drew from the caller's raw
+ * team list, which is today's identity, and showed present-day logos all
+ * Throwback Week while every other surface wore the eras.
+ *
+ * No session and no `?previewEra`: try-before-save previews belong to the
+ * board and the settings page, never the homepage. Best-effort: a failed
+ * preference read keeps today's identity rather than dropping the card.
+ */
+async function resolveEraIdentities(
+  league: CanonicalLeagueSlug,
+  leagueId: string,
+  week: number,
+  impl: typeof applyThrowbackToBoard,
+): Promise<Map<string, EraIdentity> | null> {
+  const scope = strictThrowbackScopeForLeagueSlug(league);
+  if (!scope) return null;
+  try {
+    const result = await impl({
+      configTeams: getLeagueTeamConfigs(league) as ConfigTeam[],
+      week,
+      scope,
+      leagueId,
+      authUser: null,
+      searchParams: new URLSearchParams(),
+    });
+    if (!result.active) return null;
+    return new Map(
+      result.configTeams.map((t) => [
+        t.franchiseId,
+        { name: t.name, nameMedium: t.nameMedium, nameShort: t.nameShort, abbrev: t.abbrev, icon: t.icon },
+      ]),
+    );
+  } catch {
+    return null;
+  }
 }
 
 /** Everything the island needs, or `undefined` when the feed could not be read. */
@@ -95,6 +146,13 @@ export async function buildLiveScoringHeroProps(
     // keeps its empty board, as before.
     if (data.matchups.length > 0 && !hasLiveSignal(data)) return undefined;
 
+    const eras = await resolveEraIdentities(
+      league,
+      registry.id,
+      week,
+      input.throwbackImpl ?? applyThrowbackToBoard,
+    );
+
     const teamsMap: Record<string, TeamInfo> = {};
     for (const t of teams) {
       teamsMap[t.franchiseId] = {
@@ -105,6 +163,10 @@ export async function buildLiveScoringHeroProps(
         abbrev: t.abbrev,
         color: t.color ?? '',
         icon: t.icon,
+        // Throwback Week: the era's name AND crest together, whole. Mixing an
+        // era crest with today's short name is the mismatch the shared
+        // overlay already refuses (live-scoring-data.ts).
+        ...(eras?.get(t.franchiseId) ?? {}),
       };
     }
 
