@@ -191,9 +191,9 @@ function syncKindToggle(options: RankingTableOptions, current: MyRankKind | unde
     }
     host.before(bar);
   }
-  for (const b of bar.querySelectorAll<HTMLButtonElement>('button[data-kind]')) {
+  bar.querySelectorAll<HTMLButtonElement>('button[data-kind]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.kind === current));
-  }
+  });
 }
 
 function injectRankingColumns(options: RankingTableOptions): void {
