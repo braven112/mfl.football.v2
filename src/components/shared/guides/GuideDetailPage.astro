@@ -214,9 +214,16 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
     margin: 0;
   }
 
+  /* A phone screenshot is portrait: at full column width it would stand
+     taller than the screen. Cap the height and let the width follow, so a
+     landscape screenshot still fills the column and a portrait one sits
+     centered at a readable size. */
   .guide__img {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
+    max-height: min(80vh, 44rem);
     height: auto;
+    margin-inline: auto;
     display: block;
     border: 1px solid var(--card-border);
     border-radius: var(--radius-md);
