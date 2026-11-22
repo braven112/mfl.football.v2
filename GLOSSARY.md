@@ -103,10 +103,12 @@ _Avoid_: Rules bot
 ## Features
 
 **Ask the History**:
-The question box where owners ask about their league's past and Buck answers with charts.
+The product: a league's League History pages plus the ability to ask questions about its past, which Buck answers with charts.
+_Avoid_: History product, History tier (in customer copy)
 
 **League History**:
-The set of history pages for a league: seasons, franchises, owners, rivalries and the Rafters.
+The general name for a league's history pages: seasons, franchises, owners, rivalries and the Rafters. This is what customers call it.
+_Avoid_: History pages, archive
 
 **The Pecking Order**:
 The reporter's weekly power rankings column with awards and a standings snapshot.
@@ -135,7 +137,7 @@ What a league has bought, set once per league: history, ai or full. Tier is only
 _Avoid_: Plan, package (for this setting)
 
 **History tier**:
-A league that gets League History and Ask the History only.
+The tier for a league that bought Ask the History and nothing else. It's an internal setting name, never shown to customers.
 
 **AI tier**:
 A league that gets the AI Beat Reporter, with history as an add-on and none of the site tools.
