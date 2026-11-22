@@ -5,7 +5,7 @@
  * POST /api/my-ranks?league=<slug>   { blendRedraftPct } → save the Blend slider
  *
  * Brandon's alone, the same gate as /admin/my-rankings: the site owner's own
- * franchise session in that league (isSiteOwnerIn). Everyone else gets a 404,
+ * franchise session in either of his leagues (isSiteOwnerAnywhere). Everyone else gets a 404,
  * so the endpoint says nothing about whether a board exists. Responses are
  * `private, no-store`: the ranks come from paid subscriptions and must never
  * sit in a shared cache. Only the slider's NUMBER is stored (Redis); no
@@ -16,7 +16,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
-import { isSiteOwnerIn } from '../../utils/site-owner';
+import { isSiteOwnerAnywhere } from '../../utils/site-owner';
 import { BOARD_KEY_BY_SLUG, loadPrivateBoard } from '../../utils/private-rankings';
 import { blendKey, buildMyRanks, DEFAULT_BLEND_REDRAFT_PCT } from '../../utils/my-ranks';
 import { getRedis } from '../../utils/redis-client';
@@ -36,7 +36,10 @@ function gate(request: Request, url: URL) {
   const slug = url.searchParams.get('league') ?? '';
   const league = getLeagueBySlug(slug);
   const user = getAuthUser(request);
-  if (!league || !BOARD_KEY_BY_SLUG[league.slug] || !isSiteOwnerIn(user, league.slug)) return null;
+  // His boards are his in both leagues: My Rankings switches between them
+  // under one sign-in, so the save must too (a TheLeague session saving the
+  // AFL blend used to 404 as "Couldn't save").
+  if (!league || !BOARD_KEY_BY_SLUG[league.slug] || !isSiteOwnerAnywhere(user)) return null;
   return league;
 }
 

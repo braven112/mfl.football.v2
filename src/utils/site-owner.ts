@@ -32,3 +32,14 @@ export function isSiteOwnerIn(user: AuthUser | null | undefined, slug: string): 
   if (!league || !mine) return false;
   return franchiseIdForLeague(user, league.id) === mine;
 }
+
+/**
+ * True for the owner's own session in ANY of his leagues. For his private
+ * boards only: they are one person's data, so My Rankings (which already
+ * switches between both leagues' boards) reads and saves either board from
+ * whichever league he is signed in to. Never use this for anything that acts
+ * in a league (MFL writes, rosters): those stay on isSiteOwnerIn.
+ */
+export function isSiteOwnerAnywhere(user: AuthUser | null | undefined): boolean {
+  return Object.keys(SITE_OWNER_FRANCHISES).some((slug) => isSiteOwnerIn(user, slug));
+}

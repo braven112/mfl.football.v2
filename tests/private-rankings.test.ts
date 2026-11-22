@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { loadPrivateBoard, clearPrivateBoardCache } from '../src/utils/private-rankings';
 import { buildView, parseViewQuery, viewHref, PAGE_SIZE, type BoardFile } from '../src/utils/private-rankings-view';
-import { isSiteOwnerIn } from '../src/utils/site-owner';
+import { isSiteOwnerIn, isSiteOwnerAnywhere } from '../src/utils/site-owner';
 import { getLeagueBySlug } from '../src/config/leagues';
 import type { AuthUser } from '../src/utils/auth';
 
@@ -174,6 +174,16 @@ describe('site owner gate', () => {
     expect(isSiteOwnerIn(user(tl.id, '0000', 'commissioner'), 'theleague')).toBe(false);
     expect(isSiteOwnerIn(user(tl.id, '0007', 'admin'), 'theleague')).toBe(false);
     expect(isSiteOwnerIn(null, 'theleague')).toBe(false);
+  });
+
+  it('his boards open from either league session, and to nobody else', () => {
+    expect(isSiteOwnerAnywhere(user(tl.id, '0001'))).toBe(true);
+    expect(isSiteOwnerAnywhere(user(afl.id, '0001'))).toBe(true);
+    expect(isSiteOwnerAnywhere(user(tl.id, '0002'))).toBe(false);
+    expect(isSiteOwnerAnywhere(user(tl.id, '0000', 'commissioner'))).toBe(false);
+    expect(isSiteOwnerAnywhere(user('99999', '0001'))).toBe(false);
+    expect(isSiteOwnerAnywhere(null)).toBe(false);
+    expect(readFileSync('src/pages/api/my-ranks.ts', 'utf8')).toMatch(/isSiteOwnerAnywhere\(user\)/);
   });
 
   it('gates both routes with isSiteOwnerIn, not the commissioner gate', () => {
