@@ -10,6 +10,7 @@ import type { LiveScoringHeroProps, LiveScoringResponse, MatchupPairing, TeamInf
 import type { GameWindow } from '../../types/hero-state';
 import { chooseTeamName } from '../../utils/team-names';
 import { selectSupportingMatchups } from '../../utils/live-scoring-view';
+import { liveMatchupHref } from '../../utils/live/matchup-link';
 
 // ── Polling ──
 
@@ -196,12 +197,24 @@ function TeamRow({ team, score, isLeading, isWinner, compact }: {
   );
 }
 
-function MatchupCard({ matchup, teams, scores, isFeatured, userFranchiseId }: {
+/** "Smokane FC vs Minty Fresh, 44.90 to 57.85" — the link's spoken name. */
+function matchupLabel(
+  matchup: MatchupPairing,
+  teams: Record<string, TeamInfo>,
+  scores: Record<string, number>,
+): string {
+  const home = getTeamDisplayName(teams[matchup.home]);
+  const away = getTeamDisplayName(teams[matchup.away]);
+  return `${home} vs ${away}, ${formatScore(scores[matchup.home] ?? 0)} to ${formatScore(scores[matchup.away] ?? 0)}. Open live scoring`;
+}
+
+function MatchupCard({ matchup, teams, scores, isFeatured, userFranchiseId, liveScoringHref }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   scores: Record<string, number>;
   isFeatured: boolean;
   userFranchiseId?: string;
+  liveScoringHref?: string;
 }) {
   const homeScore = scores[matchup.home] ?? 0;
   const awayScore = scores[matchup.away] ?? 0;
@@ -210,8 +223,8 @@ function MatchupCard({ matchup, teams, scores, isFeatured, userFranchiseId }: {
 
   const className = isFeatured ? 'lsh__featured' : 'lsh__compact';
 
-  return (
-    <div className={className}>
+  const body = (
+    <>
       {isFeatured && userFranchiseId && (
         <span className="lsh__featured-badge" aria-label="Your matchup">
           &#9733; Your Matchup
@@ -231,14 +244,31 @@ function MatchupCard({ matchup, teams, scores, isFeatured, userFranchiseId }: {
         isWinner={awayLeading && awayScore > 0}
         compact={!isFeatured}
       />
-    </div>
+    </>
   );
+
+  // The whole card is the link — a phone thumb lands anywhere on it — and it
+  // opens THIS game on the league's live-scoring board, not the board's top.
+  if (liveScoringHref) {
+    return (
+      <a
+        className={`${className} lsh__link`}
+        href={liveMatchupHref(liveScoringHref, matchup.home, matchup.away)}
+        aria-label={matchupLabel(matchup, teams, scores)}
+      >
+        {body}
+      </a>
+    );
+  }
+
+  return <div className={className}>{body}</div>;
 }
 
-function ChampionshipLayout({ matchup, teams, scores }: {
+function ChampionshipLayout({ matchup, teams, scores, liveScoringHref }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   scores: Record<string, number>;
+  liveScoringHref?: string;
 }) {
   const homeTeam = teams[matchup.home];
   const awayTeam = teams[matchup.away];
@@ -247,8 +277,16 @@ function ChampionshipLayout({ matchup, teams, scores }: {
   const homeLeading = homeScore > awayScore;
   const awayLeading = awayScore > homeScore;
 
+  const Root = liveScoringHref ? 'a' : 'div';
+  const linkProps = liveScoringHref
+    ? {
+        href: liveMatchupHref(liveScoringHref, matchup.home, matchup.away),
+        'aria-label': matchupLabel(matchup, teams, scores),
+      }
+    : {};
+
   return (
-    <div className="lsh__championship">
+    <Root className={`lsh__championship${liveScoringHref ? ' lsh__link' : ''}`} {...linkProps}>
       <div className="lsh__champ-team">
         {homeTeam?.icon && (
           <img className="lsh__champ-icon" src={homeTeam.icon} alt="" loading="lazy" />
@@ -268,7 +306,7 @@ function ChampionshipLayout({ matchup, teams, scores }: {
           {formatScore(awayScore)}
         </span>
       </div>
-    </div>
+    </Root>
   );
 }
 
@@ -287,6 +325,7 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
     teams,
     initialScores,
     initialRemaining,
+    liveScoringHref,
   } = props;
 
   const { scores, remaining, matchups } = useLiveScoring(
@@ -365,6 +404,7 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
               matchup={featured[0]}
               teams={teams}
               scores={scores}
+              liveScoringHref={liveScoringHref}
             />
           </>
         )}
@@ -378,6 +418,7 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
             scores={scores}
             isFeatured={true}
             userFranchiseId={i === 0 ? userFranchiseId : undefined}
+            liveScoringHref={liveScoringHref}
           />
         ))}
 
@@ -390,11 +431,24 @@ export default function LiveScoringHero(props: LiveScoringHeroProps) {
                 teams={teams}
                 scores={scores}
                 isFeatured={false}
+                liveScoringHref={liveScoringHref}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* The card shows the viewer's game and the closest few; the rest of
+          the week is one tap away. The league's own live-scoring page, the
+          same board the nav's Live Scoring link opens. */}
+      {liveScoringHref && (
+        <div className="lsh__footer">
+          <a className="cta cta--primary lsh__cta" href={liveScoringHref}>
+            View all matchups
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      )}
     </div>
   );
 }

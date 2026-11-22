@@ -136,6 +136,7 @@ const clampsSummary = state.kind === 'feature' || slot === 'article' || slot ===
   <LiveScoringHero
     client:load
     {...liveScoring}
+    liveScoringHref={ensureLeaguePrefix(getLeagueBySlug(league)!, '/live-scoring')}
     phase="regular-season"
     gameWindow={state.gameWindow ?? null}
     isLive={state.isLive ?? false}

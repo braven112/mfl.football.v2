@@ -207,6 +207,7 @@ const fallback = state.fallbackHero;
   <LiveScoringHero
     client:load
     {...liveScoring}
+    liveScoringHref={resolveLeaguePath('/theleague/live-scoring')}
     phase={state.phase as 'regular-season' | 'playoffs' | 'championship'}
     gameWindow={state.metadata.gameWindow}
     isLive={state.metadata.isLive}

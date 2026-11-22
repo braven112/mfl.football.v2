@@ -104,6 +104,12 @@ export interface LiveScoringHeroProps {
   /** The league's display name, for the championship label. Never a literal. */
   leagueName: string;
   /**
+   * The league's live-scoring page, as a site path. Each matchup links to it
+   * with `?matchup=` (opening that game) and the card ends in a "View all
+   * matchups" button. Omitted, the card renders as before, with no links.
+   */
+  liveScoringHref?: string;
+  /**
    * Franchise ids the compact grid may draw from, when the league wants it
    * narrowed. The AFL passes its viewer's CONFERENCE; TheLeague passes
    * nothing and the whole league is in scope. Never a filter on the viewer's
