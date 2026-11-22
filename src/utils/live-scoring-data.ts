@@ -39,6 +39,10 @@ export interface ConfigTeam {
   colorPrimaryDark?: string;
   colorSecondaryDark?: string;
   icon?: string;
+  /** Alternate cuts of TODAY's crest (dark surfaces, GroupMe). */
+  iconDark?: string;
+  groupMe?: string;
+  groupMeDark?: string;
   banner?: string;
   history?: FranchiseHistoryEntry[];
 }
@@ -80,8 +84,15 @@ export function applyThrowbackOverrides(
     // are cleared alongside — they belong to the CURRENT palette, and
     // downstream already falls back to the light colors when they're absent.
     const hasEraColors = identity.isHistorical && !!identity.colorPrimary;
+    // Era art: the alternate cuts (dark-surface, GroupMe) are cuts of TODAY's
+    // crest, and every dark-surface reader prefers them over `icon` — so left
+    // in place they put the current logo back on any painted surface (the
+    // standings board's division-leader row did exactly that). Clear them so
+    // those readers fall back to the era icon.
+    const eraIcon = Boolean(identity.icon) && identity.icon !== t.icon;
     return {
       ...t,
+      ...(eraIcon ? { iconDark: undefined, groupMe: undefined, groupMeDark: undefined } : {}),
       name: identity.name,
       nameMedium: identity.isHistorical ? identity.nameMedium : t.nameMedium,
       nameShort: identity.isHistorical ? identity.nameShort : t.nameShort,
