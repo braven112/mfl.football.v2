@@ -66,4 +66,17 @@ describe('my ranks', () => {
     const r = buildMyRanks({ board: board([{ ...P('a', { rookie: { avg: 3 } }), id: null }]), inSeason: false });
     expect(r.rookie.ranks).toEqual({});
   });
+
+  it('ranks dynasty by the FBG + DLF average, ignoring redraft (Projected Free Agents)', () => {
+    const r = buildMyRanks({
+      board: board([
+        P('a', { dynasty: { avg: 40 }, season: { ros: 1 } }),
+        P('b', { dynasty: { avg: 3 } }),
+        P('c', { season: { ros: 2 } }), // no dynasty rank: not on this list
+      ]),
+      inSeason: true,
+    });
+    expect(r.dynasty.ranks).toEqual({ b: 1, a: 2 });
+    expect(r.dynasty.label).toContain('FBG + DLF');
+  });
 });

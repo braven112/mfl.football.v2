@@ -11,7 +11,8 @@
  *   contract  Trade Builder, contract pages — a per-player blend that follows
  *             years left: 1 year = all redraft, 2 = half and half, 3+ = 25%
  *             redraft / 75% dynasty. A one-year deal IS a redraft.
- *   blend     Auction prep, AFL keepers — his own redraft/dynasty slider.
+ *   blend     AFL keepers — his own redraft/dynasty slider.
+ *   dynasty   Projected Free Agents — FBG + DLF dynasty, averaged (2026-11-22).
  *   rookie    Rookie drafts.
  *
  * Pure: the board, contract years, the blend share and the season flag come
@@ -22,7 +23,7 @@
 
 import type { BoardFile, BoardPlayer } from './private-rankings-view';
 
-export const MY_RANK_KINDS = ['week', 'season', 'contract', 'blend', 'rookie'] as const;
+export const MY_RANK_KINDS = ['week', 'season', 'contract', 'blend', 'dynasty', 'rookie'] as const;
 export type MyRankKind = (typeof MY_RANK_KINDS)[number];
 
 export interface MyRankList {
@@ -148,6 +149,7 @@ export function buildMyRanks({ board, inSeason, contractYears = {}, blendRedraft
       label: `your blend, ${pct}% redraft / ${100 - pct}% dynasty`,
       ranks: blendRanks(players, inSeason, () => pct / 100),
     },
+    dynasty: { label: 'dynasty, FBG + DLF', ranks: toOrdinal(collect(players, (p) => (finite(p.dynasty?.avg) ? p.dynasty!.avg! : null))) },
     rookie: { label: 'rookie', ranks: toOrdinal(collect(players, (p) => (finite(p.rookie?.avg) ? p.rookie!.avg! : null))) },
   };
 }

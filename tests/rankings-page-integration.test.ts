@@ -130,13 +130,16 @@ describe('rankings reach every decision page', () => {
       expect(src).not.toContain('buildRankingLookup(');
     });
 
-    it('hides its ranking headers on mobile with the cells', () => {
-      // The <td>s are col-hide-mobile; a <th> that stays visible when its
-      // column's cells are gone puts every remaining mobile cell under the
-      // wrong heading.
+    it('shows My Rank on phones, header and cells alike, right after Age', () => {
+      // A <th> and its <td>s must hide (or show) together, or every remaining
+      // mobile cell lands under the wrong heading. My Rank is one column now
+      // and shows on phones (Brandon, 2026-11-22), so neither carries
+      // col-hide-mobile, and the cells render where the header is injected.
       const src = read(PFA);
-      expect(src).toContain("thClasses: ['col-hide-mobile']");
-      expect(src).toContain('col-group--rankings col-hide-mobile');
+      expect(src).not.toContain("thClasses: ['col-hide-mobile']");
+      expect(src).not.toContain('col-group--rankings col-hide-mobile');
+      expect(src).toContain(`anchorSelector: '[data-sort="age"]'`);
+      expect(src).toMatch(/cell-age[^\n]*\n[^\n]*\n\s*\+ rankingCells/);
     });
 
     it('restores its own sort when the last ranking column goes', () => {
