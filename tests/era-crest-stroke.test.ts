@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import { PNG } from 'pngjs';
+import { existsSync } from 'node:fs';
+import sharp from 'sharp';
 import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
@@ -154,21 +154,26 @@ describe('a rim never clips a logo', () => {
   // which is how 13 AFL eras (the Soup Nazi, the YTS shield, the DTs face)
   // rendered as crops on Live Scoring during Throwback Week (2026-11-22).
   // Square art takes `iconFreeform` instead: no round slot, no crop.
-  const cornerIsOpaque = (png: PNG, fx: number, fy: number) => {
-    const x = Math.floor(png.width * fx);
-    const y = Math.floor(png.height * fy);
-    return png.data[(png.width * y + x) * 4 + 3] > 40;
+  const cornerIsOpaque = (
+    img: { data: Buffer; width: number; height: number },
+    fx: number,
+    fy: number,
+  ) => {
+    const x = Math.floor(img.width * fx);
+    const y = Math.floor(img.height * fy);
+    return img.data[(img.width * y + x) * 4 + 3] > 40;
   };
   const ringed = [...aflTeams, ...((theleagueConfig as any).teams ?? [])]
     .flatMap((t: any) => (t.history ?? []).map((e: any) => ({ team: t, era: e })))
     .filter(({ era }: any) => era.iconStroke && /\.png$/i.test(era.icon ?? ''));
 
-  it('rings only round art', () => {
+  it('rings only round art', async () => {
     expect(ringed.length).toBeGreaterThan(0);
     for (const { team, era } of ringed) {
       const file = join(process.cwd(), 'public', era.icon);
       if (!existsSync(file)) continue;
-      const png = PNG.sync.read(readFileSync(file));
+      const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const png = { data, width: info.width, height: info.height };
       const opaque = [
         [0.08, 0.08],
         [0.92, 0.08],
