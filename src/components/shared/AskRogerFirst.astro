@@ -195,6 +195,11 @@ const homeHref = r(`/${league.slug}`);
      there. The lone button is wide enough to read as the way out without
      being a full-width slab on desktop. */
   .roger-403__btn {
+    /* This repo has no global border-box, so without this the phone rule's
+       width: 100% adds the padding and border on top and the button runs
+       past the card's right edge (the same bug #1795 fixed on 404/500). */
+    box-sizing: border-box;
+    max-width: 100%;
     min-height: 2.75rem;
     min-width: 14rem;
     padding: 0 var(--spacing-lg, 1.25rem);
