@@ -25,6 +25,15 @@ import RookieExtensionModal from './RookieExtensionModal';
 import TradeConfirmationModal from './TradeConfirmationModal';
 import PendingTradesPanel from './PendingTradesPanel';
 import LoginModal from './LoginModal';
+import type { MyRankKind } from '../../../utils/my-ranks';
+
+/** The site owner's My Rank lists on this page, first = default (Brandon, 2026-11-22). */
+const RANK_KINDS: { kind: MyRankKind; label: string }[] = [
+  { kind: 'season', label: 'This season' },
+  { kind: 'week', label: 'This week' },
+  { kind: 'dynasty', label: 'Dynasty' },
+];
+const RANK_KIND_KEY = 'my-rank-kind:trade-builder';
 import {
   buildRankingLookup,
   onRankingsChanged,
@@ -241,13 +250,35 @@ export default function TradeBuilder({
   // Rankings lookup (admin-only)
   const isAdmin = authUser?.franchiseId === '0001';
   const [rankingLookup, setRankingLookup] = useState<RankingLookup | null>(null);
+  // The site owner switches My Rank between his lists, as on Free Agents
+  // (rankings-table.ts). Only his marker carries data-owner; the pick is a
+  // per-browser convenience, never ranks data.
+  const [rankKind, setRankKind] = useState<MyRankKind>('season');
+  const [ownerView, setOwnerView] = useState(false);
+  useEffect(() => {
+    setOwnerView(!!document.querySelector('[data-my-ranks][data-league][data-owner]'));
+    try {
+      const saved = localStorage.getItem(RANK_KIND_KEY);
+      if (RANK_KINDS.some((k) => k.kind === saved)) setRankKind(saved as MyRankKind);
+    } catch {
+      /* the default stands */
+    }
+  }, []);
+  const chooseRankKind = (kind: MyRankKind) => {
+    setRankKind(kind);
+    try {
+      localStorage.setItem(RANK_KIND_KEY, kind);
+    } catch {
+      /* still switches for this view */
+    }
+  };
   useEffect(() => {
     if (!isAdmin) return;
-    setRankingLookup(buildRankingLookup(undefined, { kind: 'contract' }));
+    setRankingLookup(buildRankingLookup(undefined, { kind: rankKind }));
     return onRankingsChanged(() => {
-      setRankingLookup(buildRankingLookup(undefined, { kind: 'contract' }));
+      setRankingLookup(buildRankingLookup(undefined, { kind: rankKind }));
     });
-  }, [isAdmin]);
+  }, [isAdmin, rankKind]);
 
   // Refs for focus return
   const submitBtnRef = useRef<HTMLButtonElement>(null);
@@ -698,6 +729,22 @@ export default function TradeBuilder({
           >
             &times;
           </button>
+        </div>
+      )}
+
+      {isAdmin && ownerView && (
+        <div className="ui-pills" role="group" aria-label="My Rank list" style={{ margin: '0 0 0.75rem' }}>
+          {RANK_KINDS.map((k) => (
+            <button
+              key={k.kind}
+              type="button"
+              className="ui-pill"
+              aria-pressed={rankKind === k.kind}
+              onClick={() => chooseRankKind(k.kind)}
+            >
+              {k.label}
+            </button>
+          ))}
         </div>
       )}
 
