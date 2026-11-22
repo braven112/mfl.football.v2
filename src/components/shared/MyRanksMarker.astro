@@ -21,7 +21,7 @@ const { user, slug } = Astro.props;
 const show = Boolean(BOARD_KEY_BY_SLUG[slug]) && isSiteOwnerIn(user, slug);
 ---
 {show && (
-  <p class="my-ranks-notice" role="status" data-my-ranks data-league={slug} hidden>
+  <p class="my-ranks-notice" role="status" data-my-ranks data-league={slug} data-owner hidden>
     Your rankings board couldn't load, so My Rank shows the default for now.
   </p>
 )}

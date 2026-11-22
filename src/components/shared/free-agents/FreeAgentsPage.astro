@@ -2073,6 +2073,11 @@ const spriteUrl = spriteUrlFor(Astro.url);
   initRankingTable({
     tableSelector: '.players-table',
     anchorSelector: '[data-sort="weight"]',
+    // The site owner alone can switch My Rank between these (rankings-table.ts).
+    kindChoices: [
+      { kind: 'season', label: 'This season' },
+      { kind: 'dynasty', label: 'Dynasty' },
+    ],
   });
 </script>
 

@@ -29,6 +29,13 @@ import {
 export interface RankingTableOptions {
   /** Which of the site owner's lists this table shows (my-ranks.ts); default `season`. */
   kind?: MyRankKind;
+  /**
+   * Lists the site owner may switch My Rank between on this table (Free
+   * Agents: this season / dynasty). Shown to him alone, as pills above the
+   * table; the first is the default. Everyone else has one board and sees
+   * no switch.
+   */
+  kindChoices?: { kind: MyRankKind; label: string }[];
   /** The table to inject headers into, e.g. `.players-table`. */
   tableSelector: string;
   /** The `<th>` that ranking headers are inserted after, e.g. `[data-sort="weight"]`. */
@@ -131,6 +138,64 @@ export function rankingHeaderTitle(col: RankingColumn, allColumns: RankingColumn
   return `${col.fullName} (${col.playerCount} players)`;
 }
 
+/** The site owner's marker (MyRanksMarker); everyone else's page has no `data-owner`. */
+const isOwnerView = () => !!document.querySelector('[data-my-ranks][data-league][data-owner]');
+
+/** Per-viewer convenience only (which list he last picked), never ranks data. */
+const KIND_CHOICE_KEY = 'my-rank-kind:free-agents';
+
+function chosenKind(options: RankingTableOptions): MyRankKind | undefined {
+  const choices = options.kindChoices;
+  if (!choices?.length || !isOwnerView()) return options.kind;
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(KIND_CHOICE_KEY);
+  } catch {
+    /* private mode: the default stands */
+  }
+  return choices.find((c) => c.kind === saved)?.kind ?? choices[0].kind;
+}
+
+/** The owner's Season / Dynasty pills above the table; idempotent. */
+function syncKindToggle(options: RankingTableOptions, current: MyRankKind | undefined): void {
+  const table = document.querySelector(options.tableSelector);
+  const host = table?.closest('.table-wrapper') ?? table;
+  if (!host) return;
+  let bar = document.querySelector<HTMLElement>('[data-my-rank-kind]');
+  if (!options.kindChoices?.length || !isOwnerView()) {
+    bar?.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'ui-pills my-rank-kind';
+    bar.dataset.myRankKind = '';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'My Rank list');
+    bar.style.margin = '0 0 0.75rem';
+    for (const c of options.kindChoices) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ui-pill';
+      b.dataset.kind = c.kind;
+      b.textContent = c.label;
+      b.addEventListener('click', () => {
+        try {
+          localStorage.setItem(KIND_CHOICE_KEY, c.kind);
+        } catch {
+          /* still switches for this view */
+        }
+        injectRankingColumns(options);
+      });
+      bar.append(b);
+    }
+    host.before(bar);
+  }
+  for (const b of bar.querySelectorAll<HTMLButtonElement>('button[data-kind]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.kind === current));
+  }
+}
+
 function injectRankingColumns(options: RankingTableOptions): void {
   // Bail before ANY emit if this instance's own table isn't on the page.
   //
@@ -145,7 +210,9 @@ function injectRankingColumns(options: RankingTableOptions): void {
   // (players.astro only restores it when there's no explicit preference).
   if (!document.querySelector(options.tableSelector)) return;
 
-  const lookup: RankingLookup = buildRankingLookup(undefined, { kind: options.kind });
+  const kind = chosenKind(options);
+  syncKindToggle(options, kind);
+  const lookup: RankingLookup = buildRankingLookup(undefined, { kind });
 
   const limitedColumns = visibleRankingColumns(lookup.columns);
   const limitedLookup: RankingLookup = { ...lookup, columns: limitedColumns };
