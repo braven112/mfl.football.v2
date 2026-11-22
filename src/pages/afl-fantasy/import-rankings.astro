@@ -1,16 +1,8 @@
 ---
 /**
- * Import Rankings (AFL) — thin route wrapper.
- * Shared implementation lives in components/shared/rankings-import/ImportRankingsPage.
- *
- * The AFL keeps its OWN rankings bucket (see src/utils/rankings-scope.ts):
- * it's a keeper league with different scoring, so an owner's read on a player
- * here is a different opinion than their dynasty-contract read in TheLeague,
- * and the two must not overwrite each other.
+ * Legacy route: Import Rankings was retired on 2026-11-22. Every owner's My Rank now
+ * comes from one built-in board (FantasySharks), so there is nothing left to
+ * import or arrange. Old links land on Free Agents.
  */
-import ImportRankingsPage from '../../components/shared/rankings-import/ImportRankingsPage.astro';
-
-export const prerender = false;
+return Astro.redirect('/afl-fantasy/players', 301);
 ---
-
-<ImportRankingsPage title="Import Rankings | AFL" />

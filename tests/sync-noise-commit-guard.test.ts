@@ -134,7 +134,6 @@ describe('held rosters and transactions are read live', () => {
     const readers: Array<[string, RegExp]> = [
       ['src/components/shared/trade-builder/TradeBuilderPage.astro', /await liveRostersFeed\(committedRostersData, selectedYear, league\.id\)/],
       ['src/pages/theleague/front-office/trade-builder.astro', /const rostersData = await liveRostersFeed\(/],
-      ['src/components/shared/custom-rankings/CustomRankingsPage.astro', /rostersData = await liveRostersFeed\(rostersData, leagueYear, league\.id\)/],
       ['src/pages/afl-fantasy/keeper-analysis.astro', /await liveRostersFeed\(committedCurRosters, selectedYear, league\.leagueId\)/],
       ['src/utils/draft-broadcast-server.ts', /year === liveYear \? liveRostersFeed\(committed, year, leagueId\)/],
       ['src/pages/theleague/admin/cutdown-report.astro', /const rosterData = await liveRostersFeed\(/],

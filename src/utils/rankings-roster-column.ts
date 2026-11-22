@@ -52,7 +52,7 @@ function setColumnDisplay(selector: string, value: string): void {
 }
 
 function populate(options: RosterRankColumnOptions): RankingLookup {
-  const lookup = buildRankingLookup(undefined, { kind: options.kind });
+  const lookup = buildRankingLookup({ kind: options.kind });
 
   // After a ClientRouter swap the previous page's module instance is still
   // alive and still answers `astro:page-load`. Its selectors can match the new

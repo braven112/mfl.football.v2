@@ -8,12 +8,15 @@
  *             dynasty: a lineup is a one-week decision.
  *   season    Free Agents, Players, Rosters — rest of season in season, the
  *             preseason redraft list off season.
- *   contract  Trade Builder, contract pages — a per-player blend that follows
+ *   contract  Contract pages — a per-player blend that follows
  *             years left: 1 year = all redraft, 2 = half and half, 3+ = 25%
  *             redraft / 75% dynasty. A one-year deal IS a redraft.
  *   blend     AFL keepers — his own redraft/dynasty slider.
  *   dynasty   Projected Free Agents — FBG + DLF dynasty, averaged (2026-11-22).
  *   rookie    Rookie drafts.
+ *
+ * Free Agents, Players and the Trade Builder also give him a This season /
+ * This week / Dynasty switch (season, week, dynasty) instead of one fixed kind.
  *
  * Pure: the board, contract years, the blend share and the season flag come
  * in as arguments, so the tests drive every branch. The API

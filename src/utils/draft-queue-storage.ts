@@ -2,7 +2,7 @@
  * Draft Queue Storage
  *
  * localStorage CRUD for the personal pre-draft pick queue.
- * Follows the same pattern as rankings-storage.ts:
+ * Pattern:
  * - In-memory cache for fast repeated reads
  * - Cross-tab sync via storage event + custom event
  * - Fire-and-forget server sync via /api/draft/queue

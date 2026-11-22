@@ -2103,9 +2103,8 @@ button.lv-card:focus-visible {
 
 /* ══════════════════════════════════════════════════════════════════════════
    THE STAT SHEET — one player's scoring, stat by stat (`LvStatSheet.tsx`).
-   Bottom sheet on a phone, centred dialog from 640px up: the same shape as
-   the My Rank editor (`my-rank-editor.css`), and capped against `dvh` for the
-   same reason — see docs/claude/rules/theming-and-assets.md § "Overlays on a
+   Bottom sheet on a phone, centred dialog from 640px up, capped against
+   `dvh` for the reason given — see docs/claude/rules/theming-and-assets.md § "Overlays on a
    phone". Portaled to <body>, so nothing here may depend on `.lv` ancestry.
    ══════════════════════════════════════════════════════════════════════════ */
 

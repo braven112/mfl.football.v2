@@ -1,75 +1,106 @@
 /**
- * Browser half of My Ranks: the site owner's own ranks under "My Rank".
+ * Browser half of "My Rank": the one ranks list every rankings surface shows.
  *
- * A page opts in by rendering <MyRanksMarker /> (which renders NOTHING unless
- * the viewer is the site owner in that league). When the marker is on the
- * page, `myRankList(kind)` fetches /api/my-ranks once per league, keeps it in
- * memory, and announces it with the same `rankingsUpdated` event the
- * localStorage boards use, so every rankings surface re-renders on its own.
+ * Every page under the league layout carries <MyRanksMarker />, which names
+ * the league. Every owner gets the default board (FantasySharks, from
+ * /api/default-ranks); the site owner's marker also carries `data-owner`,
+ * which switches it to his own ranks by kind from /api/my-ranks (Brandon,
+ * 2026-11-22). Either is fetched once per league, kept in this tab's memory,
+ * and announced with the `rankingsUpdated` event so every surface re-renders.
  *
  * Read the marker per call, never at module load: with the ClientRouter one
  * module instance survives navigation between leagues (CLAUDE.md, "Rankings
- * are per-league"). The ranks live only in this tab's memory; nothing is
- * written to localStorage.
+ * are per-league"). Nothing is written to localStorage.
  */
 
 import type { MyRankKind, MyRankList, MyRanks } from './my-ranks';
 
-type State = { status: 'loading' } | { status: 'ready'; kinds: MyRanks } | { status: 'failed' };
-const byLeague = new Map<string, State>();
+type State =
+  | { status: 'loading' }
+  | { status: 'ready'; kinds: MyRanks | null; fallback: MyRankList | null }
+  | { status: 'failed' };
+
+const byKey = new Map<string, State>();
 
 const MARKER = '[data-my-ranks][data-league]';
 
-/** The league the marker names, or null when this viewer gets the default. */
-export function myRanksLeague(): string | null {
+function marker(): HTMLElement | null {
   if (typeof document === 'undefined') return null;
-  const el = document.querySelector<HTMLElement>(MARKER);
-  return el?.dataset.league || null;
+  return document.querySelector<HTMLElement>(MARKER);
+}
+
+/** The league the marker names, or null off the league pages. */
+export function myRanksLeague(): string | null {
+  return marker()?.dataset.league || null;
+}
+
+function isOwnerView(): boolean {
+  return marker()?.hasAttribute('data-owner') ?? false;
 }
 
 function showFailure(): void {
-  const el = document.querySelector<HTMLElement>(MARKER);
-  if (el) el.hidden = false;
+  const el = marker();
+  if (el?.hasAttribute('data-owner')) el.hidden = false;
 }
 
-function load(league: string): void {
-  byLeague.set(league, { status: 'loading' });
-  fetch(`/api/my-ranks?league=${encodeURIComponent(league)}`, { credentials: 'same-origin', cache: 'no-store' })
-    .then(async (res) => {
-      if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { kinds?: MyRanks };
-      if (!data?.kinds) throw new Error('no ranks');
-      byLeague.set(league, { status: 'ready', kinds: data.kinds });
-    })
-    .catch(() => {
-      byLeague.set(league, { status: 'failed' });
-      showFailure();
-    })
-    .finally(() => window.dispatchEvent(new CustomEvent('rankingsUpdated')));
+async function fetchJson(url: string): Promise<any> {
+  const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+
+async function fetchDefault(league: string): Promise<MyRankList | null> {
+  // The default board is public; let the browser and CDN cache it.
+  const res = await fetch(`/api/default-ranks?league=${encodeURIComponent(league)}`, { credentials: 'omit' });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { label?: string; ranks?: Record<string, number> };
+  return data?.ranks ? { label: data.label ?? 'FantasySharks', ranks: data.ranks } : null;
+}
+
+function load(league: string, owner: boolean): void {
+  const key = `${league}|${owner ? 'owner' : 'default'}`;
+  byKey.set(key, { status: 'loading' });
+  const work = owner
+    ? fetchJson(`/api/my-ranks?league=${encodeURIComponent(league)}`)
+        .then((data: { kinds?: MyRanks }) => {
+          if (!data?.kinds) throw new Error('no ranks');
+          byKey.set(key, { status: 'ready', kinds: data.kinds, fallback: null });
+        })
+        .catch(async () => {
+          // His board failed: say so, and show the default rather than nothing.
+          showFailure();
+          const fallback = await fetchDefault(league).catch(() => null);
+          byKey.set(key, { status: 'ready', kinds: null, fallback });
+        })
+    : fetchDefault(league)
+        .then((fallback) => byKey.set(key, { status: 'ready', kinds: null, fallback }))
+        .catch(() => byKey.set(key, { status: 'failed' }));
+  work.finally(() => window.dispatchEvent(new CustomEvent('rankingsUpdated')));
 }
 
 /**
- * The owner's list for `kind`, `'loading'` while it is on its way, or null
- * when this viewer gets the default board (no marker, or the board failed).
+ * The "My Rank" list this viewer sees for `kind`, `'loading'` while it is on
+ * its way, or null when there is none (off the league pages, or it failed).
+ * `kind` only matters to the site owner; everyone else gets one board.
  */
 export function myRankList(kind: MyRankKind): MyRankList | 'loading' | null {
   const league = myRanksLeague();
   if (!league) return null;
-  const state = byLeague.get(league);
+  const owner = isOwnerView();
+  const state = byKey.get(`${league}|${owner ? 'owner' : 'default'}`);
   if (!state) {
-    load(league);
+    load(league, owner);
     return 'loading';
   }
   if (state.status === 'loading') return 'loading';
-  if (state.status === 'failed') {
-    showFailure();
-    return null;
-  }
-  return state.kinds[kind] ?? null;
+  if (state.status === 'failed') return null;
+  if (state.kinds) return state.kinds[kind] ?? null;
+  if (owner) showFailure();
+  return state.fallback;
 }
 
-/** Drop the cached ranks (after the Blend slider moves). */
+/** Reload the owner's ranks (after the Blend slider moves). */
 export function refreshMyRanks(): void {
   const league = myRanksLeague();
-  if (league) load(league);
+  if (league && isOwnerView()) load(league, true);
 }

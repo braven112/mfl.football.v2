@@ -274,9 +274,9 @@ export default function TradeBuilder({
   };
   useEffect(() => {
     if (!isAdmin) return;
-    setRankingLookup(buildRankingLookup(undefined, { kind: rankKind }));
+    setRankingLookup(buildRankingLookup({ kind: rankKind }));
     return onRankingsChanged(() => {
-      setRankingLookup(buildRankingLookup(undefined, { kind: rankKind }));
+      setRankingLookup(buildRankingLookup({ kind: rankKind }));
     });
   }, [isAdmin, rankKind]);
 

@@ -99,7 +99,6 @@ const pref = getAFLPreference(Astro.cookies);
   preference={pref ? { franchiseId: pref.franchiseId, conferenceId: pref.conferenceId } : null}
   rosterSize={16}
   tradeBuilder={true}
-  rankingsPage={true}
   schedulePage={true}
   franchiseLink={(id: string) => ({ href: `/afl-fantasy/franchises/${id}`, label: 'Franchise history →' })}
   signIn={{ logoSrc: '/assets/logos/afl-logo.svg', logoAlt: 'AFL logo' }}

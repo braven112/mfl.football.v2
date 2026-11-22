@@ -5,7 +5,7 @@ import { checkRateLimit } from '../../../utils/rate-limit';
 
 export const prerender = false;
 
-/** Writes overwrite the owner's MFL list; keep them scarce, as /api/draft-list does. */
+/** Writes overwrite the owner's MFL list; keep them scarce. */
 const WRITE_MAX = 30;
 const WRITE_WINDOW_SECONDS = 300;
 

@@ -110,8 +110,6 @@ export const DESTINATIONS = {
 
   // ── Site features worth a plug ──
   'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: withPackageLeagues('/front-office/trade-builder') },
-  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: withPackageLeagues('/import-rankings') },
-  'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
   rules: { path: '/rules', label: 'the constitution', leagues: withPackageLeagues('/rules') },
   'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: withPackageLeagues('/rules-chat') },
   'schefter-tip': { path: '/schefter/tip', label: 'the rumor mill tip line', leagues: BOTH },

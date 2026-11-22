@@ -7,7 +7,7 @@
  * freshness threshold, step-up auth (`requiresReauth` persists nothing),
  * and that no credential material ever crosses the HTTP response boundary.
  *
- * Route testing follows tests/kv-franchise-store.test.ts: mock the shared
+ * Route testing: mock the shared
  * redis client with a Map-backed fake, mint real session JWTs, and invoke
  * the exported GET/POST handlers with a synthetic APIContext.
  */

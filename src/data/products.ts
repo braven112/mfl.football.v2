@@ -41,7 +41,6 @@ export type FeatureId =
 	| 'push-notifications'
 	| 'owner-moves'
 	| 'power-rankings'
-	| 'custom-rankings'
 	| 'contracts-cap'
 	| 'league-books';
 
@@ -266,16 +265,6 @@ export const FEATURES: Feature[] = [
 		],
 	},
 	{
-		id: 'custom-rankings',
-		name: 'Custom player rankings',
-		screenshot: shot('built-in-rankings.webp', 'Ranking sources ticked and weighted into one composite board.'),
-		summary: 'Import rankings from the sources you trust and blend them into your own board.',
-		details: [
-			'Six ranking sources built in; import your own on top.',
-			'Weight them into one composite ranking, used across free agents and the draft.',
-		],
-	},
-	{
 		id: 'contracts-cap',
 		name: 'Contracts and salary cap',
 		screenshot: shot('salary-analytics.webp', 'Salary analytics: contract spending by position across the league.'),
@@ -430,7 +419,6 @@ const LEAGUE_PACKAGE: Product = {
 		'push-notifications',
 		'owner-moves',
 		'power-rankings',
-		'custom-rankings',
 		'contracts-cap',
 		'league-books',
 	],

@@ -175,7 +175,7 @@ describe('rankings scope', () => {
           }
         }
       }
-      expect(offenders, 'use the exports in rankings-storage.ts instead').toEqual([]);
+      expect(offenders, 'key through scopedLocalKey (rankings-scope.ts) instead').toEqual([]);
     });
   });
 });

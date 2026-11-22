@@ -46,7 +46,7 @@ const EMPTY: LineupRankings = {
  */
 export function loadLineupRankings(): LineupRankings {
   // Set Lineup is a one-week decision: the site owner's `week` list, never dynasty.
-  const lookup = buildRankingLookup(undefined, { kind: 'week' });
+  const lookup = buildRankingLookup({ kind: 'week' });
   const column = lookup.columns[0];
   if (!column) return EMPTY;
 

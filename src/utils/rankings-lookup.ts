@@ -1,7 +1,7 @@
 /**
  * Rankings Lookup — Shared Rankings API
  *
- * Reusable utility for consuming imported player rankings across any page.
+ * The one "My Rank" column every rankings surface reads (my-ranks-client.ts).
  * Works in both vanilla JS <script> blocks and React components.
  *
  * Usage pattern:
@@ -24,12 +24,6 @@ import type {
   RankingType,
   StoredRankingImport,
 } from '../types/rankings-import';
-import {
-  getAllImports,
-  getAveragePosition,
-  getCompositeConfig,
-  isImportsStorageKey,
-} from './rankings-storage';
 import { myRankList } from './my-ranks-client';
 import type { MyRankKind } from './my-ranks';
 
@@ -159,249 +153,45 @@ export interface RankingLookup {
   columns: RankingColumn[];
 }
 
-/**
- * Build a RankingLookup from stored imports.
- *
- * If no imports array is passed, reads from localStorage via getAllImports().
- * Pre-builds Map<playerId, rank> for each import for O(1) lookups.
- * Only includes matched players (those with non-null playerId).
- */
 export interface RankingLookupOptions {
   /**
    * Which of the site owner's lists this surface wants (src/utils/my-ranks.ts):
    * Set Lineup asks for `week`, contract pages for `contract`, and so on.
-   * Ignored for every other viewer, who gets their stored board.
+   * Every other viewer gets the one default board whatever the kind.
    */
   kind?: MyRankKind;
 }
 
-export function buildRankingLookup(imports?: StoredRankingImport[], options: RankingLookupOptions = {}): RankingLookup {
-  // The site owner's own ranks replace the board entirely: he sees only his
-  // number, under the same "My Rank" label (Brandon, 2026-11-22). Explicit
-  // `imports` (tests, the import editor's previews) are never overridden.
-  if (!imports) {
-    const mine = myRankList(options.kind ?? 'season');
-    if (mine === 'loading') return { byImport: new Map(), columns: [] };
-    if (mine) {
-      const map = new Map(Object.entries(mine.ranks));
-      return {
-        // Keyed as the composite: it IS "My Rank", and every surface that
-        // reads My Rank (trade builder, keeper sort, contract pages) asks for
-        // COMPOSITE_IMPORT_ID by name.
-        byImport: new Map([[COMPOSITE_IMPORT_ID, map]]),
-        columns: [
-          {
-            importId: COMPOSITE_IMPORT_ID,
-            source: 'custom',
-            type: 'overall',
-            header: 'My Rank',
-            fullName: `My Rank · ${mine.label}`,
-            playerCount: map.size,
-            importDate: '',
-            isComposite: true,
-            isOwnerList: true,
-          },
-        ],
-      };
-    }
-  }
-  const allImports = imports ?? getAllImports();
-
-  const byImport = new Map<string, Map<string, number>>();
-  const columns: RankingColumn[] = [];
-
-  for (const imp of allImports) {
-    const playerMap = new Map<string, number>();
-
-    for (const entry of imp.rankings) {
-      if (entry.matched && entry.playerId) {
-        playerMap.set(entry.playerId, entry.rank);
-      }
-    }
-
-    byImport.set(imp.id, playerMap);
-
-    columns.push({
-      importId: imp.id,
-      source: imp.source,
-      type: imp.type,
-      header: formatColumnHeader(imp),
-      fullName: formatFullName(imp),
-      playerCount: playerMap.size,
-      importDate: imp.importDate,
-    });
-  }
-
-  // Column order matches the user-defined array order from localStorage
-  // (controlled by drag-and-drop in ManageImportsSection)
-
-  // Build composite rank column when user has selected 2+ members
-  const compositeConfig = getCompositeConfig();
-  if (compositeConfig && compositeConfig.members.length >= 2) {
-    const memberIds = new Set(compositeConfig.members.map((m) => m.importId));
-
-    // Compute max rank for each composite member import (for unranked penalty)
-    const compositeMemberMaxRanks = new Map<string, number>();
-    for (const member of compositeConfig.members) {
-      const imp = allImports.find((i) => i.id === member.importId);
-      if (imp) {
-        let maxRank = 0;
-        for (const entry of imp.rankings) {
-          if (entry.rank > maxRank) maxRank = entry.rank;
-        }
-        compositeMemberMaxRanks.set(member.importId, maxRank);
-      }
-    }
-
-    // Compute weighted composite ranks
-    const compositeMap = new Map<string, number>();
-    const compositePlayerIds = new Set<string>();
-    for (const [impId, playerMap] of byImport) {
-      if (!memberIds.has(impId)) continue;
-      for (const playerId of playerMap.keys()) {
-        compositePlayerIds.add(playerId);
-      }
-    }
-
-    // Compute raw weighted-average scores first, then convert to ordinal ranks
-    // so that no two players share the same rank number.
-    const rawCompositeScores: [string, number][] = [];
-    for (const playerId of compositePlayerIds) {
-      let weightedSum = 0;
-      let totalWeight = 0;
-      for (const member of compositeConfig.members) {
-        const rank = byImport.get(member.importId)?.get(playerId);
-        if (rank != null) {
-          weightedSum += rank * member.weight;
-        } else {
-          const maxRank = compositeMemberMaxRanks.get(member.importId) ?? 0;
-          weightedSum += (maxRank + 1) * member.weight;
-        }
-        totalWeight += member.weight;
-      }
-      if (totalWeight > 0) {
-        rawCompositeScores.push([playerId, weightedSum / totalWeight]);
-      }
-    }
-
-    // Sort by raw score ascending, assign unique ordinal ranks (1, 2, 3, ...)
-    rawCompositeScores.sort((a, b) => a[1] - b[1]);
-    for (let i = 0; i < rawCompositeScores.length; i++) {
-      compositeMap.set(rawCompositeScores[i][0], i + 1);
-    }
-
-    byImport.set(COMPOSITE_IMPORT_ID, compositeMap);
-
-    // Partition columns into members and non-members (preserving relative order)
-    const memberColumns: RankingColumn[] = [];
-    const otherColumns: RankingColumn[] = [];
-    for (const col of columns) {
-      if (memberIds.has(col.importId)) {
-        col.isCompositeMember = true;
-        memberColumns.push(col);
-      } else {
-        otherColumns.push(col);
-      }
-    }
-
-    // Mark last composite member for border styling
-    if (memberColumns.length > 0) {
-      memberColumns[memberColumns.length - 1].isLastCompositeMember = true;
-    }
-
-    // Create composite column
-    const compositeColumn: RankingColumn = {
-      importId: COMPOSITE_IMPORT_ID,
-      source: 'custom',
-      type: 'overall',
-      header: 'My Rank',
-      fullName: 'My Rank (Composite)',
-      playerCount: compositeMap.size,
-      importDate: new Date().toISOString(),
-      isComposite: true,
-    };
-
-    // Rebuild columns: composite first, then members, then others
-    columns.length = 0;
-    columns.push(compositeColumn, ...memberColumns, ...otherColumns);
-  }
-
-  // Compute average rank column when 2+ imports exist
-  if (allImports.length >= 2) {
-    const averageMap = new Map<string, number>();
-
-    // Build parallel arrays of player maps and max ranks for each real import.
-    // When a player is unranked in an import, we penalise them with maxRank + 1
-    // (one spot below the worst ranked player in that import).
-    const realImportMaps: Map<string, number>[] = [];
-    const realImportMaxRanks: number[] = [];
-    for (const imp of allImports) {
-      const playerMap = byImport.get(imp.id);
-      if (playerMap) {
-        realImportMaps.push(playerMap);
-        let maxRank = 0;
-        for (const entry of imp.rankings) {
-          if (entry.rank > maxRank) maxRank = entry.rank;
-        }
-        realImportMaxRanks.push(maxRank);
-      }
-    }
-
-    // Collect all unique player IDs across real imports only
-    const allPlayerIds = new Set<string>();
-    for (const playerMap of realImportMaps) {
-      for (const playerId of playerMap.keys()) {
-        allPlayerIds.add(playerId);
-      }
-    }
-
-    // Compute raw average scores first, then convert to ordinal ranks
-    // so that no two players share the same rank number.
-    const rawAverageScores: [string, number][] = [];
-    for (const playerId of allPlayerIds) {
-      let sum = 0;
-      for (let i = 0; i < realImportMaps.length; i++) {
-        const rank = realImportMaps[i].get(playerId);
-        if (rank != null) {
-          sum += rank;
-        } else {
-          sum += realImportMaxRanks[i] + 1;
-        }
-      }
-      rawAverageScores.push([playerId, sum / realImportMaps.length]);
-    }
-
-    // Sort by raw score ascending, assign unique ordinal ranks (1, 2, 3, ...)
-    rawAverageScores.sort((a, b) => a[1] - b[1]);
-    for (let i = 0; i < rawAverageScores.length; i++) {
-      averageMap.set(rawAverageScores[i][0], i + 1);
-    }
-
-    byImport.set(AVERAGE_IMPORT_ID, averageMap);
-
-    // Insert the average column at the user-configured position
-    const avgColumn: RankingColumn = {
-      importId: AVERAGE_IMPORT_ID,
-      source: 'custom',
-      type: 'overall',
-      header: 'Avg',
-      fullName: 'Average Rank',
-      playerCount: averageMap.size,
-      importDate: new Date().toISOString(),
-      isAverage: true,
-    };
-
-    const storedPosition = getAveragePosition();
-    // When composite is active, offset average position past the composite group
-    // so the stored position is relative to the non-composite columns.
-    const compositeGroupSize = compositeConfig ? 1 + compositeConfig.members.length : 0;
-    const effectivePosition = storedPosition + compositeGroupSize;
-    // Clamp to valid range [compositeGroupSize, columns.length]
-    const insertAt = Math.max(compositeGroupSize, Math.min(effectivePosition, columns.length));
-    columns.splice(insertAt, 0, avgColumn);
-  }
-
-  return { byImport, columns };
+/**
+ * The "My Rank" lookup for this viewer: one column, keyed by
+ * COMPOSITE_IMPORT_ID because every surface that reads My Rank (trade
+ * builder, keeper sort, contract pages) asks for it by that id.
+ *
+ * Owners get FantasySharks everywhere; the site owner gets his own list for
+ * the page's kind (Brandon, 2026-11-22). Empty while it loads, or off the
+ * league pages, and the `rankingsUpdated` event announces its arrival.
+ */
+export function buildRankingLookup(options: RankingLookupOptions = {}): RankingLookup {
+  const list = myRankList(options.kind ?? 'season');
+  if (!list || list === 'loading') return { byImport: new Map(), columns: [] };
+  const map = new Map(Object.entries(list.ranks));
+  if (map.size === 0) return { byImport: new Map(), columns: [] };
+  return {
+    byImport: new Map([[COMPOSITE_IMPORT_ID, map]]),
+    columns: [
+      {
+        importId: COMPOSITE_IMPORT_ID,
+        source: 'custom',
+        type: 'overall',
+        header: 'My Rank',
+        fullName: `My Rank · ${list.label}`,
+        playerCount: map.size,
+        importDate: '',
+        isComposite: true,
+        isOwnerList: true,
+      },
+    ],
+  };
 }
 
 /**
@@ -421,29 +211,12 @@ export function getPlayerRank(
 // ---------------------------------------------------------------------------
 
 /**
- * Subscribe to ranking changes (same-tab and cross-tab).
- *
- * Listens for:
- * - 'rankingsUpdated' CustomEvent (dispatched by rankings-storage.ts on save/delete)
- * - 'storage' event (cross-tab localStorage changes)
- *
+ * Subscribe to ranking changes: the `rankingsUpdated` event my-ranks-client
+ * fires when a list arrives (or the owner's Blend slider moves).
  * Returns an unsubscribe function for cleanup.
  */
 export function onRankingsChanged(callback: () => void): () => void {
-  const handleCustomEvent = () => callback();
-
-  const handleStorageEvent = (e: StorageEvent) => {
-    // Match any league's bucket, not just TheLeague's bare key — the scoped
-    // keys are `rankings.imports.afl`, `.bb1`, … and a bare-key check made
-    // cross-tab updates a TheLeague-only feature.
-    if (isImportsStorageKey(e.key)) callback();
-  };
-
-  window.addEventListener('rankingsUpdated', handleCustomEvent);
-  window.addEventListener('storage', handleStorageEvent);
-
-  return () => {
-    window.removeEventListener('rankingsUpdated', handleCustomEvent);
-    window.removeEventListener('storage', handleStorageEvent);
-  };
+  const handle = () => callback();
+  window.addEventListener('rankingsUpdated', handle);
+  return () => window.removeEventListener('rankingsUpdated', handle);
 }

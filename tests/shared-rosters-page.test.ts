@@ -190,12 +190,10 @@ describe('the routes are thin wrappers over the one page', () => {
     const src = read('src/pages/archies/rosters.astro');
     expect(src).toContain('divisions={config.divisions}');
     expect(src).not.toMatch(/conferences=/);
-    // No schedule or Front Office hub yet; Import Rankings and the Trade
-    // Builder exist (the sheet's Trade option opens the latter).
+    // No schedule or Front Office hub yet; the Trade Builder exists (the
+    // sheet's Trade option opens it).
     expect(fs.existsSync('src/pages/archies/front-office/trade-builder.astro')).toBe(true);
     expect(src).toContain('tradeBuilder={true}');
-    expect(fs.existsSync('src/pages/archies/import-rankings.astro')).toBe(true);
-    expect(src).toContain('rankingsPage={true}');
     expect(src).toContain('schedulePage={false}');
     expect(src).not.toContain('FrontOfficeNav');
   });

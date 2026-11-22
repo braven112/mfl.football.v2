@@ -93,8 +93,7 @@ function stateFor(scope: RankingsScope): ScopeState {
  * global, an AFL free agent who happens to be unrostered in TheLeague reads as
  * claimable. The button appears on the wrong league's page and files a real
  * bid in the other one. So the client sends the page's league and the server
- * refuses a mismatch, exactly as /api/watch-list, /api/draft-list and
- * kv-franchise-store do. The param is a CHECK, never an input.
+ * refuses a mismatch, exactly as /api/watch-list does. The param is a CHECK, never an input.
  *
  * A failed fetch resolves to null and is NOT retried for the life of the page:
  * the fallback (no button) is correct and silent, and retrying on every modal

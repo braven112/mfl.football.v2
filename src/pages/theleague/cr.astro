@@ -1,20 +1,8 @@
 ---
 /**
- * Custom Rankings (The League) — thin route wrapper.
- * Shared implementation lives in components/shared/custom-rankings/CustomRankingsPage.
- *
- * The auth gate is HERE, not in the shared component: Astro.redirect() only
- * redirects from a page. See src/utils/custom-rankings-access.ts.
+ * Legacy route: Custom Rankings (/cr) was retired on 2026-11-22. Every owner's My Rank now
+ * comes from one built-in board (FantasySharks), so there is nothing left to
+ * import or arrange. Old links land on Free Agents.
  */
-import CustomRankingsPage from '../../components/shared/custom-rankings/CustomRankingsPage.astro';
-import { resolveCustomRankingsAccess } from '../../utils/custom-rankings-access';
-
-export const prerender = false;
-
-const access = resolveCustomRankingsAccess(Astro.request, Astro.url);
-if (!access) {
-  return Astro.redirect('/theleague');
-}
+return Astro.redirect('/theleague/players', 301);
 ---
-
-<CustomRankingsPage title="My Draft List | The League" user={access.user} />

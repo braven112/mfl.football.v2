@@ -15,7 +15,7 @@
  * Session-scoped, so:
  * - The league comes from the session JWT, exactly as `POST /api/waiver-claim`
  *   resolves it. `?league=` is a CHECK on top of that, never an input — the
- *   same contract as /api/watch-list, /api/draft-list and kv-franchise-store.
+ *   same contract as /api/watch-list.
  *   It is load-bearing: MFL player ids are GLOBAL, so a TheLeague owner
  *   browsing an AFL page, answered for TheLeague, would see AFL free agents
  *   who happen to be unrostered in TheLeague come back claimable — a button on

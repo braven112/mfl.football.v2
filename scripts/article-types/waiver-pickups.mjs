@@ -235,8 +235,6 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
       cta: 'See who is still out there on the free agent board.',
     }),
     articleLink(league, 'rosters', { label: 'the rosters' }),
-    featureLink(league, 'import-rankings'),
-    featureLink(league, 'custom-rankings'),
     featureLink(league, 'notifications'),
     featureLink(league, 'salary'),
   );

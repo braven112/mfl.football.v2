@@ -140,7 +140,6 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'franchise-tags',
     'trade-builder',
     'front-office',
-    'import-rankings',
     'notifications',
   ],
   'This Week': [
@@ -252,7 +251,6 @@ const BEST_BALL_COLUMNS: ColumnMap = {
     { id: 'bb1-draft-room', label: 'Draft Room' },
     { id: 'bb1-draft-board', label: 'Draft Board' },
     { id: 'bb1-mock-draft', label: 'Mock Drafts' },
-    { id: 'bb1-import-rankings', label: 'Import Rankings' },
   ],
   League: [
     { id: 'bb1-rosters', label: 'Rosters' },
