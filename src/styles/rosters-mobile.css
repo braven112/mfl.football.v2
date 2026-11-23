@@ -1105,7 +1105,6 @@
     color: var(--page-text, #111827);
   }
 
-  .rsim-bar__change,
   .rsim-move__effect,
   .rsim-years__change {
     font-size: var(--font-size-xs);
@@ -1114,13 +1113,11 @@
     color: var(--content-text-muted, #64748b);
   }
 
-  .rsim-bar__change.is-up,
   .rsim-move__effect.is-up,
   .rsim-years__change.is-up {
     color: var(--badge-success-text);
   }
 
-  .rsim-bar__change.is-down,
   .rsim-move__effect.is-down,
   .rsim-years__change.is-down {
     color: var(--color-error);
