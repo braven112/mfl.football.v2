@@ -250,7 +250,16 @@ describe('the square crop', () => {
    * readers; it just may not repaint the row.
    */
   it('contains a mark that fails to load', () => {
-    expect(boardCss).toMatch(/\.lv-side__crest \{[^}]*overflow: hidden;[^}]*font-size: 0;/);
+    // `font-size: 0` on a box the <img> fills does the containing. The board's
+    // crest boxes must NOT clip: `overflow: hidden` shaved the Throwback era
+    // rims flat, so a round crest read as a cropped one (2026-11-22).
+    expect(boardCss).toMatch(/\.lv-side__crest \{[^}]*overflow: visible;[^}]*font-size: 0;/);
+    expect(boardCss).toMatch(/\.lv-side__crest img \{[^}]*width: 100%;[^}]*height: 100%;/);
+    for (const box of ['lv-side__crest', 'lv-scorehead__crest', 'lv-standings__crest', 'lv-leaders__crest']) {
+      const rule = (boardCss.match(new RegExp(`\\.${box} \\{[^}]*\\}`))?.[0] ?? '').replace(/\/\*[\s\S]*?\*\//g, '');
+      expect(rule, box).toContain('font-size: 0');
+      expect(rule, box).not.toContain('overflow: hidden');
+    }
     expect(togglesCss).toMatch(/\.mls__mark:not\(\.mls__mark--text\) \{[^}]*overflow: hidden;/);
   });
 
