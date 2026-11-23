@@ -1105,6 +1105,11 @@
     color: var(--page-text, #111827);
   }
 
+  /* Over the cap: the plan cannot be filed as it stands. */
+  .rsim-bar__space.is-over {
+    color: var(--color-error);
+  }
+
   .rsim-move__effect,
   .rsim-years__change {
     font-size: var(--font-size-xs);

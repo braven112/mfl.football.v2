@@ -344,6 +344,8 @@ function renderSimBar(state: SimSurfaceState, current: CapYear | undefined, coun
   set('[data-rsim-count]', `${count} ${count === 1 ? 'move' : 'moves'}`);
   set('[data-rsim-year]', current.year);
   set('[data-rsim-space]', formatMoney(current.space));
+  // Negative space means the plan puts the team over the cap: paint it red.
+  bar.querySelector<HTMLElement>('[data-rsim-space]')?.classList.toggle('is-over', current.space < 0);
   // No signed change under the figure: owners read "-$2,172,667" under
   // "-$620,782" as a second balance (Brandon, 2026-11-22). The Review sheet
   // still shows each move's effect.
