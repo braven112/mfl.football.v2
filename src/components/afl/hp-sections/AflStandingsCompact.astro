@@ -12,6 +12,7 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { getCompetitionLogo, getCompetitionLogoDark } from '../../../utils/afl-competition-logo';
+import { getCompetitionMembership } from '../../../utils/afl-competition';
 import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import TeamIconCell from '../../shared/TeamIconCell.astro';
@@ -44,9 +45,15 @@ interface Props {
   userFranchiseId?: string;
   /** Number of teams promoted from D-League / relegated from Premier each year. */
   relegationCount?: number;
+  /** The season the standings belong to. Its recorded membership
+   *  (competition-history.json) decides each team's competition, the same
+   *  source the standings page reads; the config's `competition` field is a
+   *  stale fallback that is not rolled over each season. */
+  seasonYear?: number;
 }
 
-const { teams, standings, userFranchiseId, relegationCount = 4 } = Astro.props;
+const { teams, standings, userFranchiseId, relegationCount = 4, seasonYear } = Astro.props;
+const membership = seasonYear != null ? getCompetitionMembership(seasonYear) : null;
 
 const teamMap = new Map(teams.map(t => [t.franchiseId, t]));
 const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
@@ -54,7 +61,7 @@ const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
 function makeRows(): StandingRow[] {
   return standings.map(f => {
     const team = teamMap.get(f.id);
-    const tier = (team?.competition === 'Premier League' ? 'Premier League' : 'D-League') as StandingRow['tier'];
+    const tier = ((membership?.[f.id] ?? team?.competition) === 'Premier League' ? 'Premier League' : 'D-League') as StandingRow['tier'];
     const displayName = team
       ? chooseTeamName({
           fullName: team.name,
