@@ -266,6 +266,12 @@ export function resolveWeekLineup(input: {
    */
   league: CanonicalLeagueSlug | null;
   leagueYear: number;
+  /**
+   * The committed feed, when the caller already has it. Omitted (the normal
+   * case), it is read from disk. Tests pass one so they do not depend on
+   * whatever the roster-sync bot last committed for a real week.
+   */
+  diskFeed?: any | null;
 }): ResolvedWeekLineup {
   const { weekScopedPayload, ytdPayload, week, franchiseId, league, leagueYear } = input;
 
@@ -289,7 +295,9 @@ export function resolveWeekLineup(input: {
     return { entry: listedLive, starters: [], lineupReadOk: true, fromCache: false, weekScheduled: true, franchiseListed: true };
   }
 
-  const diskFeed = league ? loadWeeklyResultsFeedFromDisk(league, leagueYear) : null;
+  const diskFeed = input.diskFeed !== undefined
+    ? input.diskFeed
+    : league ? loadWeeklyResultsFeedFromDisk(league, leagueYear) : null;
   const diskEntry = findWeekResultsEntry(diskFeed, week);
   const diskStarters = extractLineupStarters(diskEntry, franchiseId);
   if (diskStarters.length > 0) {
