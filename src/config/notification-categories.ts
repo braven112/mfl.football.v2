@@ -349,7 +349,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     group: 'ops',
     label: 'League setup drift',
     description:
-      'An MFL setting no longer matches the constitution and needs fixing by hand — today, the AFL waiver order after a rollover.',
+      'An MFL setting needs fixing by hand — the AFL waiver order after a rollover, or a waiver run that lands after a Wednesday NFL game.',
     cadence: 'Rare',
     defaultOn: true,
     adminOnly: true,
