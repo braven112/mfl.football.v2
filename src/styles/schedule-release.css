@@ -616,3 +616,108 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-text-disabled, #94a3b8);
 }
+
+/* ------------------------------------------------------- NFL season quirks */
+/* The opener, Christmas and Tue/Wed/Fri games (NflSeasonQuirks.tsx). */
+
+.rel__quirksEmpty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__quirkList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.rel__quirk {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__quirkWhen {
+  display: flex;
+  flex: 0 0 6.5rem;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.rel__quirkDate {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__quirkTime,
+.rel__quirkWeek {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__quirkWhat {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.rel__quirkGame {
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__quirkTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.rel__quirkTag {
+  padding: 0.15rem 0.55rem;
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-secondary, #475569);
+  background: var(--color-surface-3, #f1f5f9);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 999px;
+}
+
+.rel__quirkTag--opener {
+  border-color: var(--color-info, #3b82f6);
+}
+
+.rel__quirkTag--christmas {
+  border-color: var(--color-success, #16a34a);
+}
+
+.rel__quirkTag--waivers {
+  color: var(--color-error, #dc2626);
+  border-color: var(--color-error, #dc2626);
+}
+
+@media (max-width: 480px) {
+  .rel__quirk {
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .rel__quirkWhen {
+    flex-basis: 5.9rem;
+  }
+}

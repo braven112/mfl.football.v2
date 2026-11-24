@@ -23,6 +23,7 @@ import {
   upcomingConstraints,
   TIER_LABEL,
 } from '../../utils/schedule-constraints.mjs';
+import NflSeasonQuirks from './NflSeasonQuirks';
 
 type MarqueeGame = {
   week: number;
@@ -262,6 +263,8 @@ export default function ScheduleRelease({
           everyone. Nobody gets a different draw.
         </p>
 
+        <NflSeasonQuirks year={data.year} showWaivers={data.canPaste} />
+
         {/* No in-browser reveal. The schedule is drawn and COMMITTED by the
             release cron, which is what makes it a lock — a page cannot commit.
             To rehearse or to fire it early, run the Schedule Release workflow. */}
@@ -460,6 +463,8 @@ export default function ScheduleRelease({
           </dd>
         </div>
       </section>
+
+      <NflSeasonQuirks year={release.year} showWaivers={data.canPaste} />
 
       <section>
         <h3 className="rel__h3">Week by week</h3>
