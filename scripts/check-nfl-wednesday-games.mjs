@@ -38,6 +38,7 @@ import {
   waiverRuns,
   waiverStatusOn,
 } from '../src/utils/nfl-wednesday-games.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { adminFranchiseIds, sendOpsAlert } from './lib/ops-alert.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -184,11 +185,8 @@ if (DRY_RUN) {
   console.error('\nA reminder was not delivered — state not recorded, failing so the run is visible.');
 } else {
   const sorted = Object.fromEntries(Object.keys(nextState).sort().map((k) => [k, nextState[k]]));
-  const text = `${JSON.stringify(sorted, null, 2)}\n`;
-  if (!fs.existsSync(STATE) || fs.readFileSync(STATE, 'utf8') !== text) {
-    fs.writeFileSync(STATE, text);
-    console.log(`\nWrote ${path.relative(ROOT, STATE)}`);
-  }
+  // Canonical write: a run that found nothing new commits nothing.
+  if (writeJsonIfChanged(STATE, sorted)) console.log(`\nWrote ${path.relative(ROOT, STATE)}`);
 }
 
 process.exit(failed ? 1 : 0);
