@@ -137,13 +137,29 @@ export function getCompetitionMembershipYears(): number[] {
 }
 
 /**
- * The most recent season's tier membership — the "current makeup". Prefers the
- * latest recorded membership year (which includes the rolled-forward upcoming
- * season once a season completes).
+ * The "current makeup": the membership of the season the AFL's standings show
+ * (getStandingsSeasonYear, its June 1 clock), or the latest recorded season
+ * before it. NEVER a later season: the movement job writes next season's makeup
+ * as soon as Week 17 is final, and that list is for articles to cite until
+ * June 1 (getUpcomingCompetitionMembership), not for labels to switch to
+ * (Brandon, 2026-11-24).
  */
-export function getCurrentCompetitionMembership(): Record<string, AflCompetition> | null {
-  const years = getCompetitionMembershipYears();
+export function getCurrentCompetitionMembership(referenceDate?: Date): Record<string, AflCompetition> | null {
+  const season = getStandingsSeasonYear('afl-fantasy', referenceDate);
+  const years = getCompetitionMembershipYears().filter((y) => y <= season);
   return years.length ? getCompetitionMembership(years[years.length - 1]) : null;
+}
+
+/**
+ * Next season's makeup, once the season-end movement job has recorded it
+ * (after Week 17), until the AFL turns over on June 1 and it becomes the
+ * current makeup. Null the rest of the year. For articles and anything that
+ * names who is headed to the Premier League / D-League next season.
+ */
+export function getUpcomingCompetitionMembership(referenceDate?: Date): { year: number; membership: Record<string, AflCompetition> } | null {
+  const year = getStandingsSeasonYear('afl-fantasy', referenceDate) + 1;
+  const membership = getCompetitionMembership(year);
+  return membership && Object.keys(membership).length ? { year, membership } : null;
 }
 
 /**

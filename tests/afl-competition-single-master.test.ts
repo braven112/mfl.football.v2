@@ -13,7 +13,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { getTeamCompetition, getCurrentCompetitionMembership } from '../src/utils/afl-competition';
+import {
+  getTeamCompetition,
+  getCurrentCompetitionMembership,
+  getUpcomingCompetitionMembership,
+  getCompetitionMembership,
+} from '../src/utils/afl-competition';
 
 const SETTINGS = [
   'data/afl-fantasy/config.json',
@@ -36,6 +41,17 @@ describe('AFL competition has one master', () => {
     const missing = teams.map((t: { franchiseId: string }) => t.franchiseId).filter((id: string) => !membership[id]);
     expect(missing).toEqual([]);
     expect(getTeamCompetition('12')).toBe(getTeamCompetition('0012'));
+  });
+
+  it("next season's makeup is upcoming until June 1, never current", () => {
+    // Dec 2025: the 2025 season is over and 2026's makeup is recorded, but the
+    // AFL has not turned over yet, so current = 2025 and upcoming = 2026.
+    const dec = new Date('2025-12-01T12:00:00Z');
+    expect(getCurrentCompetitionMembership(dec)).toEqual(getCompetitionMembership(2025));
+    expect(getUpcomingCompetitionMembership(dec)).toEqual({ year: 2026, membership: getCompetitionMembership(2026) });
+    // June 2 2026: the turnover makes 2026 current.
+    const june = new Date('2026-06-02T12:00:00Z');
+    expect(getCurrentCompetitionMembership(june)).toEqual(getCompetitionMembership(2026));
   });
 
   it('no AFL source reads a competition off a team object', () => {

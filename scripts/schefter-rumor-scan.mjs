@@ -707,12 +707,16 @@ async function loadFeed() {
 
 // The AFL's competition (Premier League / D-League) has ONE master,
 // competition-history.json beside the config; the config carries no copy.
-// Latest recorded season = the current makeup. Absent for TheLeague.
+// The current makeup = the season the standings show (the league's own
+// rollover clock, June 1 for the AFL) or the latest earlier one, never next
+// season's makeup that the movement job records after Week 17. Absent for
+// TheLeague.
 async function loadCurrentCompetitionMembership() {
   try {
     const hist = JSON.parse(await fs.readFile(path.join(path.dirname(CONFIG_PATH), 'competition-history.json'), 'utf8'));
+    const season = leagueYearFor(SCHEFTER_LEAGUE, new Date());
     const years = Object.keys(hist.seasons ?? {})
-      .filter((y) => Object.keys(hist.seasons[y]?.membership ?? {}).length)
+      .filter((y) => Number(y) <= season && Object.keys(hist.seasons[y]?.membership ?? {}).length)
       .sort((a, b) => Number(a) - Number(b));
     return years.length ? hist.seasons[years[years.length - 1]].membership : {};
   } catch {
