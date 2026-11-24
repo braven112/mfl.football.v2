@@ -36,6 +36,9 @@ const MFL_TO_BRAND = {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/** An MFL NFL team code (`GBP`, `KCC`, `FA`…) or '?' for anything else. */
+const nflCode = (id) => (typeof id === 'string' && /^[A-Z]{2,4}$/.test(id) ? id : '?');
+
 const pad = (n) => String(n).padStart(2, '0');
 
 /** Pacific calendar facts for an instant: ISO date, weekday index, "5:00 PM". */
@@ -79,9 +82,11 @@ export function findSeasonQuirks(weeks, brandTeams = {}) {
       if (!Number.isFinite(kickoff) || kickoff <= 0) continue;
       const facts = pacificFacts(new Date(kickoff * 1000));
       const teams = [].concat(m?.team ?? []);
-      const home = teams.find((t) => t?.isHome === '1')?.id ?? teams[1]?.id ?? '?';
-      const away = teams.find((t) => t?.id !== home)?.id ?? '?';
-      games.push({ week, facts, away, home });
+      const homeRaw = teams.find((t) => t?.isHome === '1')?.id ?? teams[1]?.id;
+      const awayRaw = teams.find((t) => t?.id !== homeRaw)?.id;
+      // Only a real NFL code survives: these strings are written into a
+      // generated module and a GitHub issue, so nothing else from the feed may.
+      games.push({ week, facts, away: nflCode(awayRaw), home: nflCode(homeRaw) });
     }
   }
   games.sort((a, b) => a.facts.iso.localeCompare(b.facts.iso) || a.home.localeCompare(b.home));
