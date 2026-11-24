@@ -7,6 +7,7 @@
  * together; `part` picks which. AFL awards, tiers and badge art are the AFL's
  * own competition — the shared page never learns them.
  */
+import { getTeamCompetition } from '../../utils/afl-competition';
 import {
   getFranchiseTrophyCase,
   getFranchiseTrophyRoom,
@@ -25,6 +26,7 @@ interface Props {
   team: any;
 }
 const { part, team } = Astro.props;
+const competition = getTeamCompetition(team.franchiseId);
 const id: string = team.franchiseId;
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
@@ -129,12 +131,12 @@ function lockedLabel(t: TrophyCaseItem): string {
 <span
   class:list={[
     'ui-badge ui-badge--inline franchise-hero__tier-pill',
-    team.competition === 'Premier League'
+    competition === 'Premier League'
       ? 'franchise-hero__tier-pill--premier'
       : 'franchise-hero__tier-pill--dleague',
   ]}
 >
-  {team.competition}
+  {competition}
 </span>
 )}
 {/* Compact trophy summary: label + count + on-brand title-type pips,

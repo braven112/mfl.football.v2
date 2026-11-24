@@ -100,7 +100,6 @@ const aggregateAssets = async () => {
         category: meta ? 'active' : 'former',
         conference: meta?.conference,
         division: meta?.division,
-        competition: meta?.competition,
         aliases: meta?.aliases || [],
         assets: {}
       };

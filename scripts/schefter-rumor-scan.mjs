@@ -705,8 +705,24 @@ async function loadFeed() {
   }
 }
 
+// The AFL's competition (Premier League / D-League) has ONE master,
+// competition-history.json beside the config; the config carries no copy.
+// Latest recorded season = the current makeup. Absent for TheLeague.
+async function loadCurrentCompetitionMembership() {
+  try {
+    const hist = JSON.parse(await fs.readFile(path.join(path.dirname(CONFIG_PATH), 'competition-history.json'), 'utf8'));
+    const years = Object.keys(hist.seasons ?? {})
+      .filter((y) => Object.keys(hist.seasons[y]?.membership ?? {}).length)
+      .sort((a, b) => Number(a) - Number(b));
+    return years.length ? hist.seasons[years[years.length - 1]].membership : {};
+  } catch {
+    return {};
+  }
+}
+
 async function loadTeams() {
   const raw = JSON.parse(await fs.readFile(CONFIG_PATH, 'utf8'));
+  const membership = await loadCurrentCompetitionMembership();
   const map = new Map();
   for (const t of raw.teams ?? []) {
     map.set(t.franchiseId, {
@@ -728,7 +744,7 @@ async function loadTeams() {
       // scope floor ({ kind: 'tier' }) — dropping it here silently downgrades
       // every Relegation-watch post to league-wide framing.
       conference: t.conference,
-      competition: t.competition,
+      competition: membership[t.franchiseId],
     });
   }
   return map;

@@ -86,9 +86,9 @@ describe('feature gate + config selection', () => {
     expect(getSchefterLeagueConfig(afl).teams).toHaveLength(24);
     // Same franchise id, different teams — the classic collision this guards.
     expect(findLeagueTeam(tl, '0001')?.name).not.toBe(findLeagueTeam(afl, '0001')?.name);
-    // AFL teams carry conference/competition fields TheLeague doesn't have.
+    // AFL teams carry a conference field TheLeague doesn't have. (Their
+    // competition lives only in competition-history.json, never on the team.)
     expect(findLeagueTeam(afl, '0001')?.conference).toBeDefined();
-    expect(findLeagueTeam(afl, '0001')?.competition).toBeDefined();
   });
 });
 

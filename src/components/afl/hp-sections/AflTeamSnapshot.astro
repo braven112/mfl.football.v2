@@ -16,6 +16,7 @@ import { pageIcon } from '../../../utils/page-icon';
 import { getLeagueBySlug } from '../../../config/leagues';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import { getCompetitionLogo, getCompetitionLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-competition-logo';
+import { getTeamCompetition } from '../../../utils/afl-competition';
 import type { AflSpotlight } from '../../../utils/afl-team-spotlight';
 import type { MyTeamWeek } from '../../../utils/my-team-week';
 import MyTeamThisWeek from '../../shared/hp-sections/MyTeamThisWeek.astro';
@@ -34,7 +35,6 @@ interface Team {
   nameShort?: string;
   conference?: string;
   division?: string;
-  competition?: string;
   icon?: string;
 }
 
@@ -128,9 +128,10 @@ interface MetricDef {
    than sitting above it as an icon. Both are theme-paired assets, so they go
    through ThemeImage (SSR can't know the resolved theme). An unknown tier or a
    conference id MFL hasn't given us falls back to the sprite + text headline. */
-const tierName = userTeam?.competition === PREMIER_LEAGUE
+const userCompetition = getTeamCompetition(userTeam?.franchiseId);
+const tierName = userCompetition === PREMIER_LEAGUE
   ? PREMIER_LEAGUE
-  : userTeam?.competition === D_LEAGUE
+  : userCompetition === D_LEAGUE
     ? D_LEAGUE
     : null;
 

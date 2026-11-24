@@ -129,15 +129,13 @@ const keeperSnapshots = snapshotPaths
 // so a franchise that changed hands over the offseason (or rebranded) shows
 // its new identity — the 2025 owner picked the keeps off the 2024 roster,
 // and the card should carry their name, icon, and tier. The tier chip comes
-// from getCompetitionForYear (competition-history.json), NOT the config's `competition` field:
-// resolveConfigForYear never rewrites competition, and the static field is the
-// CURRENT makeup, which drifts from any historical cycle after every
-// promotion/relegation cut.
+// from getCompetitionForYear (competition-history.json), the only master of who is
+// in which competition; the settings files carry no copy.
 const yearConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
   selectedYear
 );
-type AflTeamEntry = TeamConfig & { icon?: string; competition?: string; conference?: string };
+type AflTeamEntry = TeamConfig & { icon?: string; conference?: string };
 const teamsById = new Map<string, AflTeamEntry>(
   (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
 );
