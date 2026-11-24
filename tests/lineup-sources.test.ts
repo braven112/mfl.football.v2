@@ -31,6 +31,21 @@ import { buildMatchupCards } from '../src/utils/lineup-matchup-cards';
 const NO_DISK_FEED_YEAR = 1999;
 
 /**
+ * A committed feed that carries week 12 and lists franchise 0001 WITHOUT
+ * starters, while the opponent (0010) has some. Tests that need "disk has the
+ * week but cannot vouch for our lineup" pass this as `diskFeed`, because the
+ * real 2026 feed gains 0001's week-12 starters the moment week 12 is played
+ * (which is how three tests went red on staging in Nov 2026).
+ */
+const DISK_WEEK_12_WITHOUT_US = {
+  allWeeklyResults: {
+    weeklyResults: [
+      { week: '12', matchup: [{ franchise: [{ id: '0001' }, { id: '0010', starters: '333,444,' }] }] },
+    ],
+  },
+};
+
+/**
  * Lineup page data sources.
  *
  * Both lineup pages read the owner's saved lineup with
@@ -334,7 +349,9 @@ describe('resolveWeekLineup', () => {
   it('still hands back a disk entry it cannot vouch for, for the opponent data on it', () => {
     // lineupReadOk stays false — but weekStarters(opponentId) reads the same
     // entry, and throwing it away loses the opponent's recorded starters.
-    const r = resolveWeekLineup({ ...base, week: 12, weekScopedPayload: null, ytdPayload: null });
+    const r = resolveWeekLineup({
+      ...base, week: 12, weekScopedPayload: null, ytdPayload: null, diskFeed: DISK_WEEK_12_WITHOUT_US,
+    });
     expect(r.lineupReadOk).toBe(false);
     expect(r.entry).not.toBeNull();
   });
@@ -343,8 +360,10 @@ describe('resolveWeekLineup', () => {
     // The one-way rule. The feed syncs daily, so a lineup saved this morning
     // simply isn't in it — reading its silence as "nothing on file" would arm
     // a submit button over a projection fill and overwrite that lineup.
-    // Week 12 has no starters on disk, and both live calls failed here.
-    const r = resolveWeekLineup({ ...base, week: 12, weekScopedPayload: null, ytdPayload: null });
+    // Week 12 has no starters for us on disk, and both live calls failed here.
+    const r = resolveWeekLineup({
+      ...base, week: 12, weekScopedPayload: null, ytdPayload: null, diskFeed: DISK_WEEK_12_WITHOUT_US,
+    });
     expect(r.lineupReadOk).toBe(false);
     expect(r.starters).toEqual([]);
     expect(r.fromCache).toBe(false);
@@ -646,7 +665,7 @@ describe('a franchise MFL does not list that week', () => {
   it('still reports a genuine read failure as one', () => {
     const r = resolveWeekLineup({
       week: 12, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
-      weekScopedPayload: null, ytdPayload: null,
+      weekScopedPayload: null, ytdPayload: null, diskFeed: DISK_WEEK_12_WITHOUT_US,
     });
     expect(r.lineupReadOk).toBe(false);
     // Disk carries week 12 without our starters, so something DID answer.
