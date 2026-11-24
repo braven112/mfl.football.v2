@@ -80,16 +80,16 @@ jobs:
         run: node scripts/fetch-nfl-week-starts.mjs
         continue-on-error: true
 
-      - name: Remind admins about Wednesday NFL games
-        # Both leagues run waivers on Wednesday evening, so a Wednesday NFL game
-        # (a Week 1 opener, a holiday shift) means the run processes after a
-        # kickoff. Moving it is a hand edit on MFL; this files a GitHub issue
-        # assigned to the repo owner (GitHub emails him, and it stays open until
-        # closed) the day the NFL publishes, and again for any Wednesday game
-        # added later. One issue per game, tracked in
-        # data/nfl/wednesday-games.json. Never blocks the reveal: a failed filing
-        # turns the run red at the end instead (see the last step).
-        id: wednesday
+      - name: Refresh the NFL season quirks and flag midweek games
+        # The opener, Christmas games and every Tuesday/Wednesday/Friday game,
+        # shown on each league's Schedule Release page before and after the
+        # reveal (src/data/nfl/season-quirks.mjs). Both leagues run waivers on
+        # Wednesday evening, so a Tuesday or Wednesday game means the run
+        # processes after a kickoff; moving it is a hand edit on MFL. For each
+        # new one this files a GitHub issue assigned to the repo owner (GitHub
+        # emails him, and it stays open until closed). Never blocks the reveal:
+        # a failed filing turns the run red at the end instead (last step).
+        id: quirks
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -98,7 +98,7 @@ jobs:
         run: |
           ARGS=()
           if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS+=("--dry-run"); fi
-          node scripts/check-nfl-wednesday-games.mjs "${ARGS[@]}"
+          node scripts/fetch-nfl-season-quirks.mjs "${ARGS[@]}"
 
       - name: Draw the schedules
         # Only draws what is missing; an existing plan is reused, because
@@ -158,7 +158,7 @@ jobs:
         run: |
           git config user.name "Schedule Release Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nfl/bye-weeks.json data/nfl/wednesday-games.json src/data/nfl/week-starts.mjs 'data/*/schedule-release' 'data/*/schedule-plan' 2>/dev/null || true
+          git add data/nfl/bye-weeks.json src/data/nfl/week-starts.mjs src/data/nfl/season-quirks.mjs 'data/*/schedule-release' 'data/*/schedule-plan' 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "nothing to commit"
             exit 0
@@ -168,8 +168,8 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-      - name: Fail the run if a Wednesday reminder was not delivered
-        if: steps.wednesday.outcome == 'failure'
+      - name: Fail the run if a midweek-game reminder was not filed
+        if: steps.quirks.outcome == 'failure'
         run: |
-          echo "The Wednesday NFL game reminder issue was not filed — see its step log. It retries tomorrow."
+          echo "A Tuesday/Wednesday NFL game reminder issue was not filed — see its step log. It retries tomorrow."
           exit 1
