@@ -10,6 +10,7 @@
  */
 import StandingsPage from '../../components/shared/standings/StandingsPage.astro';
 import config from '../../../data/sandbox/sandbox.config.json';
+import { getStandingsSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
@@ -38,7 +39,12 @@ const fetchMetaFeeds = lazy(`${league.dataPath}/mfl-feeds/*/fetch.meta.json`);
 const weeklyResultsFeeds = lazy(`${league.dataPath}/mfl-feeds/*/weekly-results.json`);
 const scheduleFeeds = lazy(`${league.dataPath}/mfl-feeds/*/schedule.json`);
 
-const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
+// The league's own start-of-season date decides when the new season shows (0-0).
+const season = chooseStandingsSeason(
+  standingsFeeds,
+  Astro.url.searchParams.get('year'),
+  getStandingsSeasonYear(league.slug, getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+);
 if (!season.valid) {
   return Astro.redirect(resolveLeaguePath(`/sandbox/standings?year=${season.defaultYear}`, Astro.locals.hideLeaguePrefix ?? false));
 }

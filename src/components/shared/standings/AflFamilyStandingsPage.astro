@@ -37,7 +37,7 @@ import {
   type TeamConfig,
 } from '../../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../../utils/afl-structure';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { getStandingsSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { resolveThrowbackRequestState } from '../../../utils/throwback-request-state';
 import { applyThrowbackToStandingsConfig } from '../../../utils/throwback-standings';
 import { strictThrowbackScopeForNavSlug } from '../../../utils/throwback-scope';
@@ -117,7 +117,7 @@ const { config: seasonConfig, todayNames: throwbackTodayNames } = strictThrowbac
       {
         isCurrentSeason:
           selectedYear ===
-          getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+          getStandingsSeasonYear(leagueDef.slug, getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
       },
     )
   : { config: applySeasonStructure(yearResolvedConfig, seasonStructure), todayNames: undefined };

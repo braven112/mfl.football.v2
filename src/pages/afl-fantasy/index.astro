@@ -50,7 +50,7 @@ import {
 } from '../../utils/live-scoring-hero-props';
 import { buildMondaySpotlightProps, type MondaySpotlightHeroProps } from '../../utils/monday-spotlight-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
-import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { getAflLeagueYear, getCurrentSeasonYear, getStandingsSeasonYear } from '../../utils/league-year';
 import { getPlayerMap, preloadPlayerIdentity } from '../../utils/player-map';
 import { resolveViewerBreakingStory } from '../../utils/breaking-story-hero';
 import { getCurrentNFLWeek } from '../../utils/current-week';
@@ -179,19 +179,20 @@ const seasonFeed = <T,>(year: number, file: string) => getLeagueData<T>(feedPath
 /** `preferred` and the five years before it, newest first. */
 const walkBackYears = (preferred: number) => Array.from({ length: 6 }, (_, i) => preferred - i);
 await preloadLeagueData([
-  ...walkBackYears(getCurrentSeasonYear(effectiveDate)).map((y) => feedPath(y, 'standings.json')),
+  ...walkBackYears(getStandingsSeasonYear(AFL.slug, effectiveDate)).map((y) => feedPath(y, 'standings.json')),
   ...walkBackYears(getAflLeagueYear(effectiveDate)).map((y) => feedPath(y, 'rosters.json')),
 ]);
 
 // The season this page DISPLAYS, which is not always the season being PLAYED.
 // MFL creates the new year at kickoff and leaves it empty until games are
-// played, so this walks back from getCurrentSeasonYear to the most recent year
+// played, so this walks back from getStandingsSeasonYear (the AFL's June 1
+// clock) to the most recent year
 // with populated standings rather than rendering an empty table.
 //
 // Deliberately NOT the year the recap hero asks about — see `liveSeasonYear`
 // below, which is computed from the same clock but never walks back.
 function resolveSeasonYearWithData(): number {
-  const preferred = getCurrentSeasonYear(effectiveDate);
+  const preferred = getStandingsSeasonYear(AFL.slug, effectiveDate);
   for (const y of walkBackYears(preferred)) {
     const standings = seasonFeed<{ leagueStandings?: { franchise: any[] } }>(y, 'standings.json');
     if (standings?.leagueStandings?.franchise?.length) return y;

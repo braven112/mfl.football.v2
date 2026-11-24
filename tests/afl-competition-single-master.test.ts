@@ -61,3 +61,16 @@ describe('AFL competition has one master', () => {
     expect(src).not.toMatch(/competition:\s*t\.competition/);
   });
 });
+
+describe("standings turn over on each league's own start-of-season date", () => {
+  it('standings season follows the AFL league year, not Labor Day', async () => {
+    const { getStandingsSeasonYear } = await import('../src/utils/league-year');
+    // After the season ends, before June 1: still the finished season.
+    expect(getStandingsSeasonYear('afl-fantasy', new Date('2027-03-15T12:00:00-08:00'))).toBe(2026);
+    // From June 1: the new season (0-0 until Week 1), months before Labor Day.
+    expect(getStandingsSeasonYear('afl-fantasy', new Date('2027-06-02T12:00:00-07:00'))).toBe(2027);
+    // TheLeague turns over on ITS start-of-season date, after Feb 14 8:45 PM PT.
+    expect(getStandingsSeasonYear('theleague', new Date('2027-02-14T12:00:00-08:00'))).toBe(2026);
+    expect(getStandingsSeasonYear('theleague', new Date('2027-02-15T12:00:00-08:00'))).toBe(2027);
+  });
+});

@@ -6,7 +6,7 @@
 import { chooseTeamName } from '../../../utils/team-names';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber, formatPoints } from '../../../utils/formatters';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getStandingsSeasonYear } from '../../../utils/league-year';
 import { getContextualRows } from '../../../utils/homepage-dashboard';
 import { getLeagueStandings } from '../../../utils/standings';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
@@ -24,7 +24,7 @@ const { userFranchiseId, teamSummaries, referenceDate } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
-const year = getCurrentSeasonYear(referenceDate);
+const year = getStandingsSeasonYear('theleague', referenceDate);
 const teams = config.teams ?? [];
 const teamMap = new Map(teams.map((t: any) => [t.franchiseId, t]));
 

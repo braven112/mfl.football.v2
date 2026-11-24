@@ -19,6 +19,7 @@
  */
 
 import competitionHistory from '../../data/afl-fantasy/competition-history.json';
+import { getStandingsSeasonYear } from './league-year';
 import { type AflCompetition, PREMIER_LEAGUE, D_LEAGUE, getCompetitionLogo, getCompetitionLogoDark } from './afl-competition-logo';
 
 export { type AflCompetition, PREMIER_LEAGUE, D_LEAGUE, getCompetitionLogo, getCompetitionLogoDark };
@@ -151,12 +152,18 @@ export function getCurrentCompetitionMembership(): Record<string, AflCompetition
  * afl.assets.json) deliberately carry no `competition` field, because a copy
  * there is not rolled over each season and once put ten teams in last year's
  * league on the homepage (Nov 2026). Pass the season the page shows; with no
- * season, the latest recorded membership (the current makeup) answers.
+ * season, the season the standings show by default (getStandingsSeasonYear,
+ * the AFL's June 1 rollover) answers.
  */
 export function getTeamCompetition(franchiseId: string | null | undefined, year?: number | string | null): AflCompetition | null {
   if (!franchiseId) return null;
   const id = String(franchiseId).padStart(4, '0');
-  const membership = year != null ? getCompetitionMembership(year) : getCurrentCompetitionMembership();
+  // No season given: the season the AFL's standings show (its June 1 clock),
+  // so a team's competition turns over with the standings, never before them;
+  // the season-end movement job records next season's makeup months early.
+  const membership =
+    getCompetitionMembership(year ?? getStandingsSeasonYear('afl-fantasy')) ??
+    (year == null ? getCurrentCompetitionMembership() : null);
   const tier = membership?.[id];
   return typeof tier === 'string' && tier ? tier : null;
 }

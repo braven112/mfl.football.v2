@@ -20,7 +20,7 @@ import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
 import { listLeagueData, loadLeagueData } from '../../utils/league-data';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { getStandingsSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
 import {
@@ -49,7 +49,7 @@ const leagueFeeds = lazyFeeds('league.json');
 // The default year follows ?testDate= — the same clock the throwback gate below
 // reads — so /rollover-check can drive this page by date alone.
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
-const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
+const currentSeasonYear = getStandingsSeasonYear('theleague', testDate ?? undefined);
 // A fallback redirect keeps the test clock, or the preview lands on the real year.
 const testDateQuery = testDate
   ? `&testDate=${encodeURIComponent(Astro.url.searchParams.get('testDate')!)}`

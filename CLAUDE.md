@@ -141,8 +141,12 @@ Two dates drive year transitions and they are **not the same clock**:
 
 Use `getCurrentLeagueYear()` (from `src/utils/league-year.ts`) for anything
 roster-management-shaped: rosters, contracts, salary cap, auctions, trade
-analysis. Use `getCurrentSeasonYear()` for anything results-shaped: standings,
-playoffs, MVP tracking, draft order. Picking the wrong one for a new page
+analysis. Use `getCurrentSeasonYear()` for anything results-shaped: playoffs,
+MVP tracking, draft order. **Standings are the exception**: a standings default
+(page, homepage card, AFL competitions) is `getStandingsSeasonYear(slug)` — the
+league's OWN start-of-season date from the registry (TheLeague after Feb 14,
+the AFL June 1), so from that moment the new season shows at 0-0 (Brandon,
+2026-11-24). Picking the wrong one for a new page
 silently shows last/next year's data for ~6 months of the calendar. Test
 date-dependent features with `?testDate=YYYY-MM-DD`, not the system clock.
 
