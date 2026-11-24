@@ -344,12 +344,11 @@ function renderSimBar(state: SimSurfaceState, current: CapYear | undefined, coun
   set('[data-rsim-count]', `${count} ${count === 1 ? 'move' : 'moves'}`);
   set('[data-rsim-year]', current.year);
   set('[data-rsim-space]', formatMoney(current.space));
-  set('[data-rsim-change]', formatSignedMoney(current.change));
-  const change = bar.querySelector<HTMLElement>('[data-rsim-change]');
-  if (change) {
-    change.classList.toggle('is-up', current.change > 0);
-    change.classList.toggle('is-down', current.change < 0);
-  }
+  // Negative space means the plan puts the team over the cap: paint it red.
+  bar.querySelector<HTMLElement>('[data-rsim-space]')?.classList.toggle('is-over', current.space < 0);
+  // No signed change under the figure: owners read "-$2,172,667" under
+  // "-$620,782" as a second balance (Brandon, 2026-11-22). The Review sheet
+  // still shows each move's effect.
 
   // Announce the new figure once per change, then clear it so a later focus
   // move does not re-read it (accessibility.md, 2026-01-18).
@@ -361,7 +360,7 @@ function renderSimBar(state: SimSurfaceState, current: CapYear | undefined, coun
     if (!first || count > 0) {
       live.textContent = count === 0
         ? 'All simulated moves cleared.'
-        : `${count} simulated ${count === 1 ? 'move' : 'moves'}. ${current.year} cap space ${formatMoney(current.space)}, ${formatSignedMoney(current.change)}.`;
+        : `${count} simulated ${count === 1 ? 'move' : 'moves'}. ${current.year} cap space ${formatMoney(current.space)}.`;
       window.setTimeout(() => {
         if (live.isConnected) live.textContent = '';
       }, 1200);

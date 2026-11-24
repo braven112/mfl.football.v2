@@ -446,5 +446,136 @@
         ]
       }
     ]
+  },
+  {
+    "slug": "veteran-extensions",
+    "title": "Veteran extensions",
+    "summary": "Once a season, lock up one veteran: add one or two years, see what he costs every year, check your cap, and submit. It goes straight to MFL.",
+    "featurePath": "/rosters",
+    "featureLabel": "Open Rosters",
+    "icon": "coin",
+    "updated": "2026-11-22",
+    "leagues": [
+      "theleague"
+    ],
+    "visibility": "all",
+    "body": [
+      "Every team gets one veteran extension per league year. It's how you keep a player you believe in on a longer deal before he hits free agency. You set it up from his player card on <a href=\"/rosters\">Rosters</a>, you see exactly what he'll cost in every season before you commit, and nothing is filed until you press Submit.",
+      {
+        "type": "list",
+        "heading": "The rules",
+        "items": [
+          "<strong>One per team, per league year.</strong> The league year runs from Feb 15 to Feb 14 at 8:45pm PT, not by the NFL season. An extension in November and one in early February fall in the same league year, so you only get one of them. The count resets after Feb 14 at 8:45pm PT, when the new league year starts.",
+          "<strong>He needs at least 2 years left</strong> on his current contract. With 1 year left he can't be extended; that's what the franchise tag is for, and it opens Feb 1 to Feb 14 at 8:45pm PT.",
+          "<strong>No rookie contracts.</strong> Players on a rookie deal (RC) or a 1st-round team option (TO) use the Rookie Extension instead, and that doesn't use up your veteran extension.",
+          "<strong>Add 1 or 2 years, up to 6 in total.</strong> The contract after the extension can't run longer than 6 years, so a player with 5 years left can only add 1.",
+          "<strong>Any player, any time.</strong> The rule applies to all players equally, and there's no window: file it whenever you're ready during the season.",
+          "<strong>The $45 million cap still applies.</strong> His raise counts this season, not just in later years, so make sure you have the room.",
+          "<strong>The rule runs until Feb 15, 2028.</strong> The 2027 league year is the last one with a veteran extension."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "How the price is set",
+        "items": [
+          "<strong>It's the Rookie Extension formula.</strong> Take the average of the top 5 salaries at his position. Multiply it by the years you're adding, divide by his total years after the extension, and add the result to his current salary.",
+          "<strong>That's his new salary starting this season.</strong> It then goes up 10% every year, like every other contract.",
+          "<strong>Adding 2 years costs more than adding 1</strong>, because more of the top-5 average is spread across the contract. His player card lists the price of each under <em>Extend or tag</em>."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Worked example: Colston Loveland, TE",
+        "items": [
+          "<strong>Today:</strong> $852,500 with 4 years left. The owner adds 2 years, so the new contract runs 6, the most it can.",
+          "<strong>Top 5 TE average:</strong> $6,518,000.",
+          "<strong>The math:</strong> $6,518,000 × 2 ÷ 6 = $2,172,667, plus his $852,500 = <strong>$3,025,167</strong> this season.",
+          "<strong>Every season after:</strong> +10% a year: $3,327,684, $3,660,452, $4,026,497, $4,429,147, then $4,872,062 in the final year."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Step 1: Open the player's menu",
+        "items": [
+          "<strong>Go to <a href=\"/rosters\">Rosters</a></strong>, find your player, and tap him to open his card.",
+          "<strong>Tap the ⋮ button</strong> next to Simulate cut, then pick <strong>Veteran Extension</strong>. If it isn't in the menu, he isn't eligible."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "veteran-extension-loveland-menu-2.webp",
+        "alt": "Colston Loveland's player card on a phone with the menu open. Veteran Extension, Extend contract 1 to 2 years, is the first option, above Move to IR, Release, Simulate trade and the trade block options.",
+        "caption": "The ⋮ menu on a player's card. Veteran Extension sits at the top."
+      },
+      {
+        "type": "list",
+        "heading": "Step 2: Choose the years to add",
+        "items": [
+          "<strong>Pick 1 or 2.</strong> These are years added to what's already on his contract, not the new total. Loveland has 4 years left, so 2 makes his new contract 6 years.",
+          "<strong>Only see 1 year?</strong> That means he can only be extended by 1 more year, because the new contract can't go past the 6-year maximum."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "veteran-extension-loveland-years.webp",
+        "alt": "Step 2 of 3 of the Veteran Extension sheet for Colston Loveland. It shows his salary of $853K, 4 years left and a standard contract, then two buttons: 1 year and 2 years.",
+        "caption": "Step 2 of 3. The buttons are the years you're adding."
+      },
+      {
+        "type": "list",
+        "heading": "Step 3: Check the terms",
+        "items": [
+          "<strong>Extension terms</strong> show his salary now and after the extension, and how long the contract runs before and after.",
+          "<strong>Formula breakdown</strong> opens the math with the real numbers, including the top-5 average it used.",
+          "<strong>Salary projection</strong> lists every season of the new deal with his age that year, so you know what you'll be paying him at 27, not just at 22.",
+          "<strong>Tap Add Extension.</strong> This only adds it to your plan. Nothing has been filed yet."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "veteran-extension-loveland-terms.webp",
+        "alt": "Step 3 of 3. Extension terms: current $853K, after extension $3.03M. Term 4 years to 6 years. A Formula breakdown section, then a salary projection starting with 2026, age 22, $3.03M, and an Add Extension button.",
+        "caption": "Step 3 of 3: the new salary, the new term, and the math behind it."
+      },
+      {
+        "type": "list",
+        "heading": "Step 4: See it on your roster",
+        "items": [
+          "<strong>He's marked EXTENSION</strong> on your roster in GM view, with his new salary and how long the contract now runs.",
+          "<strong>The bar at the bottom</strong> counts your planned moves and shows this season's cap space with them included. In this example the extension leaves the team at <strong>negative $620,782</strong>, which is over the $45 million cap.",
+          "<strong>Changed your mind?</strong> Tap the × on the EXTENSION tag to take it off."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "veteran-extension-loveland-plan-2.webp",
+        "alt": "Colston Loveland's row on the roster, highlighted, showing $3,025,167, 6 years through 2031 and a green Extension tag. The bottom bar shows 1 move, 2026 cap space of negative $620,782 and a Review and submit button.",
+        "caption": "Planned, not filed. Here the extension puts the team $620,782 over the cap."
+      },
+      {
+        "type": "list",
+        "heading": "Step 5: Review and submit",
+        "items": [
+          "<strong>Tap Review &amp; submit.</strong> You'll see each move, what it does to this season's cap, and a <strong>Cap by year</strong> table: your payroll, his salary, and your cap space every season, next to what it was before.",
+          "<strong>Look for a negative cap number.</strong> If any season shows negative cap space, the extension would put you over the $45 million cap. Clear room first (or add 1 year instead of 2) before you submit.", "<strong>In this example, don't submit yet.</strong> Loveland's extension puts the team $620,782 over the cap this season, so the owner has to free up at least that much, with a cut or a trade, before he can submit it.",
+          "<strong>Undo</strong> drops one move and <strong>Clear all</strong> drops them all. Your plan is saved to your account, so you can leave and come back to it.",
+          "<strong>Tap Submit.</strong> The new contract is written to MFL right away. There's no commissioner approval step."
+        ]
+      },
+      {
+        "type": "image",
+        "src": "veteran-extension-loveland-review-2.webp",
+        "alt": "The Review and submit sheet. Colston Loveland's veteran extension, $853K to $3.03M and 4 to 6 years, costs $2,172,667 in 2026, with an Undo button. Below, the cap by year table shows 2026 space of negative $620,782 in red, down from $1,551,885, then Clear all and Submit 1 move buttons.",
+        "caption": "Nothing is filed until you tap Submit. This owner has to clear $620,782 of cap space first."
+      },
+      {
+        "type": "list",
+        "heading": "Good to know",
+        "items": [
+          "<strong>Submitting is final.</strong> Once it's on MFL, it's your veteran extension for the league year, and contracts can't be renegotiated.",
+          "<strong>Not sure who to pick?</strong> The <em>Your veteran extension</em> card in <a href=\"/front-office\">Front Office</a> says whether you've used yours this league year and lists your likely candidates first: players under $3 million who have finished in the top 10 at their position."
+        ]
+      }
+    ]
   }
 ]
