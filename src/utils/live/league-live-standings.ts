@@ -54,7 +54,6 @@ export interface LeagueLiveStandings {
 interface ConfigTeam {
   franchiseId: string;
   division?: string;
-  competition?: string;
 }
 
 interface LeagueConfigShape {
@@ -277,10 +276,9 @@ export async function readLiveStandings(input: {
         cutoffWeek,
       });
       const membership = getCompetitionMembership(year);
-      const teams = new Map((config.teams ?? []).map((t) => [t.franchiseId, t]));
       const tiers = buildCompetitionSections({
         feedRows,
-        teamTier: (id) => membership?.[id] ?? teams.get(id)?.competition,
+        teamTier: (id) => membership?.[id],
         allPlay,
         leagueSlug: slug,
       });

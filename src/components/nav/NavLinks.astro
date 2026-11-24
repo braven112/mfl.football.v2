@@ -139,7 +139,7 @@ function getAflCompetitionOverride(
   fid?: string,
 ): { label: string; iconUrl: string; iconDarkUrl: string } | null {
   if (lg !== 'afl' || link.id !== 'premier-league') return null;
-  const tier = aflPreference?.competitionId || (fid ? getAFLTeamData(fid)?.competition : null);
+  const tier = (fid ? getAFLTeamData(fid)?.competition : null) || aflPreference?.competitionId;
   return AFL_TIER_LINKS[tier as keyof typeof AFL_TIER_LINKS] ?? AFL_TIER_LINKS[PREMIER_LEAGUE];
 }
 

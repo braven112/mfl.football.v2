@@ -193,18 +193,14 @@ async function loadWeeklyResults(cfg, year, cutoffWeek) {
 
 // --- Membership resolution -----------------------------------------------------
 
-// Membership for a season: competition-history if present, else (for the latest
-// completed season only) seed from afl.config.json, which mirrors the makeup
-// teams competed in that season.
-function resolveMembership(history, cfg, year) {
+// Membership for a season comes only from competition-history.json, the one
+// master of who is in which competition. The settings files carry no copy
+// (a stale one there once put ten teams in last year's league), so there is
+// nothing to seed from: a season without recorded membership is skipped.
+function resolveMembership(history, _cfg, year) {
   const recorded = history.seasons?.[String(year)]?.membership;
   if (recorded && Object.keys(recorded).length) {
     return { membership: recorded, source: 'competition-history' };
-  }
-  if (year === LATEST_COMPLETED) {
-    const fromConfig = {};
-    for (const t of cfg.teams) if (t.competition) fromConfig[t.franchiseId] = t.competition;
-    return { membership: fromConfig, source: 'afl.config snapshot (latest completed season)' };
   }
   return { membership: null, source: null };
 }

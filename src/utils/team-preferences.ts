@@ -6,6 +6,7 @@
 import type { AstroCookies } from 'astro';
 import leagueAssets from '../data/theleague.assets.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
+import { getTeamCompetition } from './afl-competition';
 import bb1Assets from '../../data/best-ball-1/bb1.assets.json';
 import { getActiveTeams } from './league-assets';
 import { getLeagueTeams } from './league-config';
@@ -188,7 +189,7 @@ export function getAFLTeamData(franchiseId: string): { conference: string; compe
 
   return {
     conference: team.conference,
-    competition: team.competition,
+    competition: getTeamCompetition(normalized) ?? '',
   };
 }
 

@@ -31,6 +31,7 @@ import { getPersonaLabels } from '../../utils/persona-server';
 // src/utils/live-scoring-test-drive.ts.
 import { showTestDriveHero } from '../../utils/live-scoring-test-drive';
 import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
+import { getTeamCompetition } from '../../utils/afl-competition';
 import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
 import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
 import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
@@ -332,7 +333,7 @@ const heroInput = {
   // franchise alone decides whose colours the card wears.
   castFranchiseId: userFranchiseId,
   userPoolId: userConferenceId,
-  userTier: userTeam?.competition,
+  userTier: getTeamCompetition(userTeam?.franchiseId) ?? undefined,
   poolOf: getFranchiseConference,
   posts: feed.posts,
   waiverCalendar: aflWaiverCalendar,

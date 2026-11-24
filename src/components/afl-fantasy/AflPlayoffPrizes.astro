@@ -11,6 +11,7 @@
  */
 import { getCompetitionAllPlayStandings } from '../../utils/standings';
 import { getCurrentWeekForYear } from '../../utils/current-week';
+import { getTeamCompetition } from '../../utils/afl-competition';
 import { isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
 import { findFinalGame, type BracketView } from '../../utils/playoff-bracket-views';
 
@@ -75,7 +76,7 @@ const getTeamDisplay = (franchiseId?: string) => {
     id,
     name: asset?.name || franchise?.name || franchise?.franchise_name || `Franchise ${id}`,
     icon: asset?.icon,
-    competition: asset?.competition,
+    competition: getTeamCompetition(id) ?? undefined,
   };
 };
 

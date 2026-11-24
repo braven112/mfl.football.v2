@@ -34,7 +34,6 @@ export interface LeagueTeamConfig {
   abbrev?: string;
   division?: string;
   conference?: string;
-  competition?: string;
 }
 
 export interface SchefterLeagueConfig {

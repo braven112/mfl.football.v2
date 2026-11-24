@@ -8,6 +8,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../front-office-nav/FrontOfficeNav.astro';
 import type { LeagueDefinition } from '../../../config/leagues';
+import { getTeamCompetition } from '../../../utils/afl-competition';
 import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
 
 interface Props {
@@ -18,6 +19,10 @@ interface Props {
 }
 const { league, config: aflConfig, hasRulePages } = Astro.props;
 const prefix = `/${league.slug}`;
+// The AFL's competition comes only from competition-history.json; another
+// league (the keeper demo) carries its own on its generated config.
+const competitionOf = (t: any): string =>
+  (league.slug === 'afl-fantasy' ? getTeamCompetition(t.franchiseId) : t.competition) ?? '';
 
 // The real keeper tool is the per-team Keeper Planner, which lives on the
 // rosters page (`?view=planner`). AFL has no formal keeper construct on MFL,
@@ -26,8 +31,8 @@ const prefix = `/${league.slug}`;
 const PLANNER_VIEW = 'view=planner';
 
 const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
-  const tierA = a.competition === 'Premier League' ? 0 : 1;
-  const tierB = b.competition === 'Premier League' ? 0 : 1;
+  const tierA = competitionOf(a) === 'Premier League' ? 0 : 1;
+  const tierB = competitionOf(b) === 'Premier League' ? 0 : 1;
   if (tierA !== tierB) return tierA - tierB;
   return a.name.localeCompare(b.name);
 });
@@ -78,11 +83,11 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
               <div class="keeper-card__meta">
                 <span class:list={[
                   'keeper-card__tier',
-                  team.competition === 'Premier League'
+                  competitionOf(team) === 'Premier League'
                     ? 'keeper-card__tier--premier'
                     : 'keeper-card__tier--dleague',
                 ]}>
-                  {team.competition}
+                  {competitionOf(team)}
                 </span>
                 <span class="keeper-card__count keeper-card__count--placeholder">
                   Manage keepers →

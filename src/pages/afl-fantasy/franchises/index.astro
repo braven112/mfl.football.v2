@@ -10,6 +10,7 @@
 import FranchisesIndexPage, { type FranchiseCardRow } from '../../../components/shared/franchises/FranchisesIndexPage.astro';
 import AflFranchiseCardBadges from '../../../components/afl-fantasy/AflFranchiseCardBadges.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+import { getTeamCompetition } from '../../../utils/afl-competition';
 import { getFranchiseTitleProgress, type TitleTypeProgress } from '../../../utils/afl-awards';
 import { getAflCareerStats, type AflCareerStats } from '../../../utils/afl-career-stats';
 import { getConferenceName, type ConferenceId } from '../../../utils/afl-conference';
@@ -107,7 +108,7 @@ const toCard = (r: CardRow): FranchiseCardRow => ({
   pct: winPct(r.stats),
   seasons: r.stats?.seasons ?? 0,
   points: r.stats?.pointsFor ?? 0,
-  subtitle: `${r.team.division} Division · ${r.team.competition}`,
+  subtitle: [`${r.team.division} Division`, getTeamCompetition(r.team.franchiseId)].filter(Boolean).join(' · '),
   titles: r.titles,
 });
 

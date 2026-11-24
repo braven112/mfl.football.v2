@@ -32,6 +32,7 @@
  */
 
 import { getLeagueTeams } from './league-config';
+import { getTeamCompetition } from './afl-competition';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 // From the contrast module, NOT `nfl-marks`: that one loads the NFL brand kit
@@ -93,7 +94,6 @@ interface RawTeam {
   aliases?: string[];
   division?: string;
   conference?: string;
-  competition?: string;
   color?: string;
   colorPrimary?: string;
   colorSecondary?: string;
@@ -667,7 +667,8 @@ export function franchiseBrand(
     aliases: Array.isArray(team.aliases) ? team.aliases : [],
     division: team.division ?? null,
     conference: team.conference ?? null,
-    competition: team.competition ?? null,
+    // The AFL's competition comes only from competition-history.json.
+    competition: leagueSlug === 'afl-fantasy' ? getTeamCompetition(team.franchiseId) : null,
     colors,
     derived: derivedColorsOf(leagueSlug, team),
     accentProperty: teamAccentProperty(team.franchiseId),

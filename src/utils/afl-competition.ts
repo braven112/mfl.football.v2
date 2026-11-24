@@ -144,3 +144,19 @@ export function getCurrentCompetitionMembership(): Record<string, AflCompetition
   const years = getCompetitionMembershipYears();
   return years.length ? getCompetitionMembership(years[years.length - 1]) : null;
 }
+
+/**
+ * THE answer to "which competition is this AFL team in?". competition-history.json
+ * is the only master: the settings files (config.json, afl.config.json,
+ * afl.assets.json) deliberately carry no `competition` field, because a copy
+ * there is not rolled over each season and once put ten teams in last year's
+ * league on the homepage (Nov 2026). Pass the season the page shows; with no
+ * season, the latest recorded membership (the current makeup) answers.
+ */
+export function getTeamCompetition(franchiseId: string | null | undefined, year?: number | string | null): AflCompetition | null {
+  if (!franchiseId) return null;
+  const id = String(franchiseId).padStart(4, '0');
+  const membership = year != null ? getCompetitionMembership(year) : getCurrentCompetitionMembership();
+  const tier = membership?.[id];
+  return typeof tier === 'string' && tier ? tier : null;
+}
