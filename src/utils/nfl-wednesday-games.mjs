@@ -12,10 +12,11 @@
  * The fix is a hand edit on MFL's calendar (the owner moves that week's run),
  * which nothing here can do. What can be automated is NOT FORGETTING: the
  * schedule-release job runs this the day the NFL publishes its schedule and
- * pushes the league's admins one reminder per new Wednesday game.
+ * files one GitHub issue (assigned to the repo owner, so it is emailed and
+ * stays open until closed) per new Wednesday game.
  *
  * Pure functions only — the script (scripts/check-nfl-wednesday-games.mjs)
- * does the fetching, the state file and the push.
+ * does the fetching, the state file and the issue.
  */
 
 import { ptParts } from './nfl-week-starts.mjs';

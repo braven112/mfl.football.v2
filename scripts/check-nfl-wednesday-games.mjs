@@ -7,22 +7,25 @@
  * — and again for any Wednesday game the NFL adds or moves later (a flex, a
  * holiday shift). See src/utils/nfl-wednesday-games.mjs for why it matters.
  *
- * WHO HEARS: each league whose MFL calendar runs waivers on a Wednesday, read
- * from the league's own synced calendar feed (never a hardcoded list), pushed
- * to that league's admins under `ops-league-setup`. Moving the run is a hand
- * edit on MFL only an admin can make, so the group chat never hears about it.
+ * HOW IT REMINDS: one GitHub issue per Wednesday game, assigned to the repo
+ * owner, so GitHub emails him and it stays open until he closes it. Not a push:
+ * the owner ruled that out (2026-11-23) as too easy to miss. The issue lists
+ * each league whose MFL calendar runs waivers that Wednesday, read from the
+ * league's own synced calendar feed (never a hardcoded list), skipping leagues
+ * with no admin here. Moving the run is a hand edit on MFL.
  *
  * ONCE PER GAME: data/nfl/wednesday-games.json records every Wednesday game
- * seen per season. A game is pushed only the first time it appears, and only
- * while it is still ahead. The file is written only after the push went out,
- * so a failed send is retried by the next daily run instead of being lost.
+ * seen per season. An issue is filed only the first time a game appears, and
+ * only while it is still ahead. The file is written only after the issue was
+ * filed, so a failure is retried by the next daily run instead of being lost.
  *
- * Env:
- *   CRON_SECRET   required to push; unset logs and exits 1 (nothing recorded)
+ * Env (set by the workflow):
+ *   GITHUB_TOKEN, GITHUB_REPOSITORY   required to file; unset fails the run
+ *   ISSUE_ASSIGNEE                    who the issue is assigned to
  *
  * Usage:
  *   node scripts/check-nfl-wednesday-games.mjs              # last, this and next season
- *   node scripts/check-nfl-wednesday-games.mjs --dry-run    # report only, never pushes or writes
+ *   node scripts/check-nfl-wednesday-games.mjs --dry-run    # report only, never files or writes
  *   node scripts/check-nfl-wednesday-games.mjs --year=2026
  */
 import fs from 'node:fs';
@@ -39,7 +42,7 @@ import {
   waiverStatusOn,
 } from '../src/utils/nfl-wednesday-games.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
-import { adminFranchiseIds, sendOpsAlert } from './lib/ops-alert.mjs';
+import { adminFranchiseIds } from './lib/ops-alert.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STATE = path.join(ROOT, 'data/nfl/wednesday-games.json');
@@ -126,50 +129,86 @@ for (const year of SEASONS) {
   nextState[year] = games;
 }
 
-// League by league: who runs waivers on a Wednesday, and what each new game hits.
-const alerts = [];
-for (const league of ALL_LEAGUES.filter(isFullManagementLeague)) {
-  const lines = [];
-  for (const [year, games] of newBySeason) {
-    const { season, latest } = leagueCalendars(league, year);
-    if (!runsWaiversOnWednesday(season) && !runsWaiversOnWednesday(latest)) continue;
-    for (const g of games) {
+// Game by game: which leagues run waivers that Wednesday, and when.
+const issues = [];
+for (const [year, games] of newBySeason) {
+  for (const g of games) {
+    const leagues = [];
+    for (const league of ALL_LEAGUES.filter(isFullManagementLeague)) {
+      const { season, latest } = leagueCalendars(league, year);
+      if (!runsWaiversOnWednesday(season) && !runsWaiversOnWednesday(latest)) continue;
       const { status, time } = waiverStatusOn(season, g.date);
       if (status === 'moved') {
         console.log(`  ${league.slug}: ${g.date} already has no waiver run — skipping`);
         continue;
       }
+      // Leagues with no admin are someone else's to run (Archie's): skip them.
+      if (!adminFranchiseIds(league).length) {
+        console.log(`  ${league.slug}: runs Wednesday waivers but has no admin here — not ours to move`);
+        continue;
+      }
       const runTime = time ?? usualWednesdayRunTime(latest);
-      const when = status === 'conflict' ? `waivers run ${runTime} PT that day` : `usual waiver run is Wed${runTime ? ` ${runTime} PT` : ''}`;
-      lines.push(`${describeGame(g)} (${when})`);
+      const when = status === 'conflict'
+        ? `waivers run at ${runTime} PT that day`
+        : `waivers usually run Wednesday${runTime ? ` at ${runTime} PT` : ''} (that week isn't on MFL's calendar yet)`;
+      leagues.push(`- **${league.name}**: ${when}. [MFL league home](https://${league.mflHost}/${year}/home/${league.id})`);
     }
+    if (leagues.length) issues.push({ year, game: g, leagues });
   }
-  if (!lines.length) continue;
-  if (!adminFranchiseIds(league).length) {
-    console.warn(`  ${league.slug}: runs Wednesday waivers but has no admin franchises — nobody to remind`);
-    continue;
-  }
-  alerts.push({ league, lines });
+}
+
+/**
+ * File one GitHub issue per game, assigned to the repo owner. GitHub emails
+ * the assignee, and the issue stays open until the waiver run is moved and
+ * the issue is closed, which a push notification could not do (owner's call,
+ * 2026-11-23: "I'll for sure miss" a push).
+ */
+async function fileIssue(title, body) {
+  const repo = process.env.GITHUB_REPOSITORY;
+  const token = process.env.GITHUB_TOKEN;
+  const assignee = process.env.ISSUE_ASSIGNEE;
+  if (!repo || !token) return { ok: false, reason: 'no GITHUB_REPOSITORY / GITHUB_TOKEN' };
+  const res = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'mfl.football NFL Wednesday games',
+    },
+    body: JSON.stringify({ title, body, ...(assignee ? { assignees: [assignee] } : {}) }),
+  });
+  if (!res.ok) return { ok: false, reason: `HTTP ${res.status} ${await res.text()}` };
+  const json = await res.json();
+  return { ok: true, url: json.html_url };
 }
 
 const summary = [];
 let failed = false;
-for (const { league, lines } of alerts) {
-  const count = lines.length;
-  const title = count === 1 ? 'NFL game on a Wednesday' : `${count} NFL games on a Wednesday`;
-  const body = `${lines.join('\n')}\nMove ${league.name}'s waiver run on MFL so it processes before kickoff.`;
-  console.log(`\n[${league.slug}] ${title}\n${body}`);
-  summary.push(`### ${league.name}: ${title}`, '', ...lines.map((l) => `- ${l}`), '');
-  const result = await sendOpsAlert({
-    league,
-    category: 'ops-league-setup',
-    title,
-    body,
-    tag: `ops-nfl-wednesday-${[...newBySeason.keys()].join('-')}`,
-    dryRun: DRY_RUN,
-  });
-  if (result?.skipped && !DRY_RUN) {
-    console.error(`  ${league.slug}: reminder NOT delivered (${result.skipped})`);
+for (const { game: g, leagues } of issues) {
+  const matchup = `${teamNickname(g.away, brandTeams)} at ${teamNickname(g.home, brandTeams)}`;
+  const title = `Move waivers: NFL game on Wednesday ${g.label.slice(4)} (Week ${g.week}, ${matchup})`;
+  const body = [
+    `The NFL schedule has a **Wednesday** game: **${matchup}**, ${g.label}, ${g.time} PT (Week ${g.week}).`,
+    '',
+    'Waivers in these leagues would process after kickoff:',
+    '',
+    ...leagues,
+    '',
+    "Move that week's waiver run on MFL so it processes before kickoff, then close this issue.",
+    '',
+    '_Filed by the Schedule Release job (`scripts/check-nfl-wednesday-games.mjs`)._',
+  ].join('\n');
+  console.log(`\n${title}\n${body}`);
+  summary.push(`### ${title}`, '', ...leagues, '');
+  if (DRY_RUN) {
+    console.log('  [dry-run] issue not filed.');
+    continue;
+  }
+  const result = await fileIssue(title, body);
+  if (result.ok) {
+    console.log(`  filed ${result.url}`);
+  } else {
+    console.error(`  issue NOT filed (${result.reason})`);
     failed = true;
   }
 }
@@ -181,8 +220,8 @@ if (process.env.GITHUB_STEP_SUMMARY && summary.length) {
 if (DRY_RUN) {
   console.log('\n[dry-run] state file not written.');
 } else if (failed) {
-  // Leave the state alone so tomorrow's run sends it again.
-  console.error('\nA reminder was not delivered — state not recorded, failing so the run is visible.');
+  // Leave the state alone so tomorrow's run files it again.
+  console.error('\nA reminder issue was not filed — state not recorded, failing so the run is visible.');
 } else {
   const sorted = Object.fromEntries(Object.keys(nextState).sort().map((k) => [k, nextState[k]]));
   // Canonical write: a run that found nothing new commits nothing.

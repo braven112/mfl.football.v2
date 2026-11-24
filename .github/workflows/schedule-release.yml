@@ -41,6 +41,7 @@ concurrency:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   lock:
@@ -82,15 +83,17 @@ jobs:
       - name: Remind admins about Wednesday NFL games
         # Both leagues run waivers on Wednesday evening, so a Wednesday NFL game
         # (a Week 1 opener, a holiday shift) means the run processes after a
-        # kickoff. Moving it is a hand edit on MFL; this makes sure the admins
-        # hear about it the day the NFL publishes, and again for any Wednesday
-        # game added later. One push per game, tracked in
-        # data/nfl/wednesday-games.json. Never blocks the reveal: a failed send
+        # kickoff. Moving it is a hand edit on MFL; this files a GitHub issue
+        # assigned to the repo owner (GitHub emails him, and it stays open until
+        # closed) the day the NFL publishes, and again for any Wednesday game
+        # added later. One issue per game, tracked in
+        # data/nfl/wednesday-games.json. Never blocks the reveal: a failed filing
         # turns the run red at the end instead (see the last step).
         id: wednesday
         continue-on-error: true
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_ASSIGNEE: ${{ github.repository_owner }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           ARGS=()
@@ -168,5 +171,5 @@ jobs:
       - name: Fail the run if a Wednesday reminder was not delivered
         if: steps.wednesday.outcome == 'failure'
         run: |
-          echo "The Wednesday NFL game reminder did not go out — see its step log. It retries tomorrow."
+          echo "The Wednesday NFL game reminder issue was not filed — see its step log. It retries tomorrow."
           exit 1
