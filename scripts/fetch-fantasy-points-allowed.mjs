@@ -168,6 +168,11 @@ async function fetchPointsAllowed(year, leagueId) {
  * readable schedule, completed weeks stand in for games played.
  *
  * Rank 1 = fewest points allowed (best defense vs that position).
+ *
+ * @param {any} mflData
+ * @param {number} completedWeeks
+ * @param {Record<string, number> | null} [gamesPlayed] MFL team code → final games
+ * @returns {Record<string, Record<string, { avg: number, rank?: number }>>}
  */
 export function transformPointsAllowed(mflData, completedWeeks, gamesPlayed = null) {
   const teams = mflData?.pointsAllowed?.team;
