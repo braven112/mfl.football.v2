@@ -244,7 +244,8 @@ const officialUsed = !!data?.official && q.window === 'season';
                           ) : (
                             <td class:list={['mp-cell', c.tier && `mp-tier-${c.tier}`]} title={`${c.home ? 'vs' : 'at'} ${code(c.opp!)}: allows ${fmt(c.avg)} to ${POSITION_LABELS[row.position]}s per game, rank ${c.rank ?? '—'} of ${teamCount}`}>
                               <span class="mp-opp">{c.home ? '' : '@'}{code(c.opp!)}</span>
-                              <span class="mp-rank">{c.rank ?? '—'}</span>
+                              <span class="mp-pts">{fmt(c.avg)}</span>
+                              <span class="mp-rank">#{c.rank ?? '—'}</span>
                             </td>
                           )
                         ))}
@@ -257,7 +258,7 @@ const officialUsed = !!data?.official && q.window === 'season';
             </section>
           ))}
           <p class="mp-note">
-            Each cell is the opponent (@ = away) and its rank against that position. Avg is what those opponents give up per game across Weeks {q.from}–{q.to}, with a bye counted as 0. Up to {MAX_RANGE} weeks at a time.
+            Each cell is the opponent (@ = away), the points it gives up per game to that position, and its rank (#32 gives up the most). Avg is what those opponents give up per game across Weeks {q.from}–{q.to}, with a bye counted as 0. Up to {MAX_RANGE} weeks at a time.
           </p>
         </>
       ) : (
@@ -470,6 +471,15 @@ const officialUsed = !!data?.official && q.window === 'season';
   .mp-avg {
     display: block;
     font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-opp {
+    font-size: var(--font-size-xs);
+  }
+  .mp-pts {
+    display: block;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
     font-variant-numeric: tabular-nums;
   }
   .mp-rank {
