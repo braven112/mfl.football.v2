@@ -109,7 +109,9 @@ const tableRows = summary
   ? Object.entries(summary).sort(([a, ra], [b, rb]) => (rb[q.sort].avg ?? -1) - (ra[q.sort].avg ?? -1) || a.localeCompare(b))
   : [];
 const teamCount = tableRows.length;
-const averages = summary ? Object.fromEntries(PLANNER_POSITIONS.map((p) => [p, leagueAverage(summary, p)])) : {};
+const averages: Partial<Record<PlannerPosition, number | null>> = summary
+  ? Object.fromEntries(PLANNER_POSITIONS.map((p) => [p, leagueAverage(summary, p)]))
+  : {};
 
 const tierOf = (rank: number | null) => (rank == null ? null : fpaTier(teamCount && teamCount !== 32 ? Math.round((rank / teamCount) * 32) : rank));
 const fmt = (v: number | null | undefined) => (typeof v === 'number' ? v.toFixed(1) : '—');
@@ -290,7 +292,7 @@ const officialUsed = !!data?.official && q.window === 'season';
           <tfoot>
             <tr>
               <th scope="row" class="mp-team">Avg</th>
-              {PLANNER_POSITIONS.map((p) => <td class="mp-num"><span class="mp-avg">{fmt((averages as Record<string, number | null>)[p])}</span></td>)}
+              {PLANNER_POSITIONS.map((p) => <td class="mp-num"><span class="mp-avg">{fmt(averages[p])}</span></td>)}
             </tr>
           </tfoot>
         </table>
