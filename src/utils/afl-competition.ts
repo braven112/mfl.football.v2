@@ -99,7 +99,12 @@ export interface CompetitionChampions {
 
 interface TierSeason {
   membership?: Record<string, AflCompetition | string>;
+  /** `competition-history` | `rollforward:<year>` | `projected:<year>` (see compute-afl-competition-movement.mjs). */
   membershipSource?: string;
+  /** Set while the makeup is a mid-season projection: the last finished week it reflects. */
+  projectedThroughWeek?: number;
+  /** Hand corrections (owner changes) laid over the computed makeup on every run. */
+  membershipOverrides?: Record<string, AflCompetition | string>;
   champions?: CompetitionChampions;
   championsSource?: string;
   allPlayStandings?: Record<string, string[]>;
@@ -150,16 +155,30 @@ export function getCurrentCompetitionMembership(referenceDate?: Date): Record<st
   return years.length ? getCompetitionMembership(years[years.length - 1]) : null;
 }
 
+export interface UpcomingCompetitionMembership {
+  year: number;
+  membership: Record<string, AflCompetition>;
+  /** True while the season is still being played: "on course for", not "will be in". */
+  projected: boolean;
+  /** For a projection, the last finished week it reflects; null once final. */
+  throughWeek: number | null;
+}
+
 /**
- * Next season's makeup, once the season-end movement job has recorded it
- * (after Week 17), until the AFL turns over on June 1 and it becomes the
- * current makeup. Null the rest of the year. For articles and anything that
- * names who is headed to the Premier League / D-League next season.
+ * Next season's makeup until the AFL turns over on June 1 and it becomes the
+ * current makeup. Mid-season it is a PROJECTION (the movement rule applied to
+ * the all-play table through the last finished week, refreshed weekly) and
+ * says so; after Week 17 it is final. For articles and anything that names who
+ * is headed to the Premier League / D-League next season — always word a
+ * projection as "on course for", never as settled.
  */
-export function getUpcomingCompetitionMembership(referenceDate?: Date): { year: number; membership: Record<string, AflCompetition> } | null {
+export function getUpcomingCompetitionMembership(referenceDate?: Date): UpcomingCompetitionMembership | null {
   const year = getStandingsSeasonYear('afl-fantasy', referenceDate) + 1;
   const membership = getCompetitionMembership(year);
-  return membership && Object.keys(membership).length ? { year, membership } : null;
+  if (!membership || !Object.keys(membership).length) return null;
+  const season = SEASONS[String(year)];
+  const projected = String(season?.membershipSource ?? '').startsWith('projected:');
+  return { year, membership, projected, throughWeek: projected ? season?.projectedThroughWeek ?? null : null };
 }
 
 /**
