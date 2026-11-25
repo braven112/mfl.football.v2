@@ -66,6 +66,7 @@ interface GridRow {
   name: string;
   position: PlannerPosition;
   team: string;
+  espnId?: string;
   ppg: number | null;
   status?: string;
   cells: MatchupCell[];
@@ -83,6 +84,7 @@ function gridRow(id: string, status?: string): GridRow | null {
     name: p.name,
     position,
     team: p.team,
+    espnId: p.espnId,
     ppg: pointsPerGame(id, p.team, data!.scoresByWeek, data!.schedule).ppg,
     status,
     cells,
@@ -241,7 +243,7 @@ const officialUsed = !!data?.official && q.window === 'season';
                     {section.rows.map((row) => (
                       <tr>
                         <td class="mp-grid-player">
-                          <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} size="default">
+                          <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} espnId={row.espnId} size="default">
                             {injuries[row.id] && (
                               <span
                                 slot="after-name"

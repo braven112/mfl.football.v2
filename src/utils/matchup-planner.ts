@@ -145,6 +145,8 @@ export interface PlannerPlayer {
   name: string;
   position: string;
   team: string;
+  /** ESPN id, for the transparent ESPN headshot over the team-color chip. */
+  espnId?: string;
 }
 
 /** `players.json` → id → player, planner positions only. */
@@ -152,7 +154,13 @@ export function indexPlayers(payload: any): Map<string, PlannerPlayer> {
   const out = new Map<string, PlannerPlayer>();
   for (const p of asArray(payload?.players?.player)) {
     if (!p?.id || !isPlannerPosition(String(p.position))) continue;
-    out.set(String(p.id), { id: String(p.id), name: String(p.name ?? ''), position: String(p.position), team: String(p.team ?? '') });
+    out.set(String(p.id), {
+      id: String(p.id),
+      name: String(p.name ?? ''),
+      position: String(p.position),
+      team: String(p.team ?? ''),
+      espnId: p.espn_id ? String(p.espn_id) : undefined,
+    });
   }
   return out;
 }
