@@ -28,6 +28,9 @@ import {
   type MatchupCell, type PlannerPosition,
 } from '../../utils/matchup-planner';
 import { fpaTier } from '../../utils/nfl-matchups';
+import { injuryBadgeLabel, injuryBadgeTitle, type InjuryMap } from '../../utils/mfl-injuries';
+import { loadLiveInjuryMap } from '../../utils/mfl-injuries-live-map';
+import '../../styles/injury-indicator.css';
 
 interface Props {
   /** The registry slug of the route this renders under. */
@@ -45,7 +48,10 @@ const slug = requested && leagueSlugs.includes(requested) ? requested : routeSlu
 const leagueParam = slug === routeSlug ? null : slug;
 const path = Astro.url.pathname;
 
-const data = await loadPlannerData(slug);
+const [data, injuries] = await Promise.all([
+  loadPlannerData(slug),
+  loadLiveInjuryMap(slug).catch((): InjuryMap => ({})),
+]);
 const maxWeek = data ? lastRegularWeek(data.schedule) : 18;
 const q = parsePlannerQuery(Astro.url.searchParams, maxWeek);
 const href = (patch: Parameters<typeof plannerHref>[3]) => plannerHref(path, leagueParam, q, patch);
@@ -116,7 +122,6 @@ const averages: Partial<Record<PlannerPosition, number | null>> = summary
 const tierOf = (rank: number | null) => (rank == null ? null : fpaTier(teamCount && teamCount !== 32 ? Math.round((rank / teamCount) * 32) : rank));
 const fmt = (v: number | null | undefined) => (typeof v === 'number' ? v.toFixed(1) : '—');
 const code = (team: string) => normalizeTeamCode(team);
-const statusTag = (s?: string) => (s === 'INJURED_RESERVE' ? 'IR' : s === 'TAXI_SQUAD' ? 'Taxi' : '');
 
 const leagueName = getLeagueBySlug(slug)?.name ?? slug;
 const windowText = q.window === 'recent' ? `last ${RECENT_GAMES} games` : 'this season';
@@ -227,6 +232,7 @@ const officialUsed = !!data?.official && q.window === 'season';
                   <thead>
                     <tr>
                       <th scope="col" class="mp-grid-player">Player</th>
+                      <th scope="col" class="mp-grid-ppg">PPG</th>
                       {weeks.map((w) => <th scope="col" class="mp-grid-week">Wk {w}</th>)}
                       <th scope="col" class="mp-grid-score" title="Average of what the opponents allow per game; a bye counts as 0">Avg</th>
                     </tr>
@@ -235,9 +241,18 @@ const officialUsed = !!data?.official && q.window === 'season';
                     {section.rows.map((row) => (
                       <tr>
                         <td class="mp-grid-player">
-                          <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} size="compact" />
-                          <span class="mp-meta">{fmt(row.ppg)} ppg{statusTag(row.status) && ` · ${statusTag(row.status)}`}</span>
+                          <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} size="default">
+                            {injuries[row.id] && (
+                              <span
+                                slot="after-name"
+                                class="injury-indicator injury-indicator--static"
+                                title={injuryBadgeTitle(injuries[row.id])}
+                                aria-label={injuryBadgeTitle(injuries[row.id])}
+                              >{injuryBadgeLabel(injuries[row.id].injuryStatus)}</span>
+                            )}
+                          </PlayerCell>
                         </td>
+                        <td class="mp-grid-ppg" data-label="PPG">{fmt(row.ppg)}</td>
                         {row.cells.map((c) => (
                           c.bye ? (
                             <td class="mp-cell mp-cell--bye">BYE</td>
@@ -457,11 +472,10 @@ const officialUsed = !!data?.official && q.window === 'season';
     font-weight: var(--font-weight-semibold);
     font-variant-numeric: tabular-nums;
   }
-  .mp-meta {
-    display: block;
-    margin-top: 0.125rem;
-    color: var(--content-text-muted);
-    font-size: var(--font-size-xs);
+  .mp-grid-ppg {
+    width: 3.25rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
   .mp-cell {
     text-align: center;
@@ -572,18 +586,27 @@ const officialUsed = !!data?.official && q.window === 'season';
     .mp-grid th.mp-grid-player {
       display: none;
     }
+    /* Row one: the player cell, with PPG in the last column above Avg. */
+    .mp-grid th.mp-grid-ppg {
+      display: none;
+    }
     .mp-grid td.mp-grid-player {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
+      grid-column: 1 / -2;
       width: auto;
       padding: 0.5rem 0.5rem 0.25rem;
     }
-    .mp-grid td.mp-grid-player .mp-meta {
-      flex: none;
-      margin: 0;
+    .mp-grid td.mp-grid-ppg {
+      width: auto;
+      padding: 0.5rem 0.125rem 0.25rem;
+      border-top: 1px solid var(--content-border);
+    }
+    .mp-grid td.mp-grid-ppg::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--content-text-muted);
+      font-size: var(--font-size-2xs);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.04em;
     }
     .mp-grid tbody td.mp-cell,
     .mp-grid tbody td.mp-grid-score {
