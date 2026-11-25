@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getNonEmpty } from './lib/env.mjs';
+import { gamesDivisor, gamesPlayedByTeam } from './lib/nfl-games-played.mjs';
 import {
   DEFAULT_LEAGUE_ID,
   getLeagueById,
@@ -130,6 +131,20 @@ function getCompletedWeeks(year, leagueName) {
 }
 
 /**
+ * Final games per NFL team from the committed nflSchedule-full.json, or null
+ * when it cannot be read (then every team falls back to completed weeks).
+ */
+function loadGamesPlayed(year, leagueName) {
+  const file = path.join(root, `data/${leagueName}/mfl-feeds/${year}/nflSchedule-full.json`);
+  try {
+    const games = gamesPlayedByTeam(JSON.parse(fs.readFileSync(file, 'utf-8')));
+    return Object.keys(games).length >= 30 ? games : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch pointsAllowed from MFL API.
  * Returns the raw JSON response.
  */
@@ -148,18 +163,18 @@ async function fetchPointsAllowed(year, leagueId) {
 /**
  * Transform MFL pointsAllowed response into our FPA format.
  *
- * MFL returns season totals per team per position. We divide by
- * completed weeks to get per-game averages, then rank 1-32.
+ * MFL returns season totals per team per position. We divide by the games
+ * each team has played (a bye is not a game), then rank 1-32. Without a
+ * readable schedule, completed weeks stand in for games played.
  *
  * Rank 1 = fewest points allowed (best defense vs that position).
  */
-function transformPointsAllowed(mflData, completedWeeks) {
+export function transformPointsAllowed(mflData, completedWeeks, gamesPlayed = null) {
   const teams = mflData?.pointsAllowed?.team;
   if (!Array.isArray(teams) || teams.length === 0) {
     throw new Error('No team data in pointsAllowed response');
   }
 
-  const gamesPlayed = Math.max(completedWeeks, 1);
   const positionsWeTrack = new Set(['QB', 'RB', 'WR', 'TE', 'PK']);
 
   // Step 1: Parse season totals into per-game averages
@@ -168,6 +183,7 @@ function transformPointsAllowed(mflData, completedWeeks) {
   for (const team of teams) {
     const code = normalizeTeamCode(team.id);
     if (!code) continue;
+    const divisor = gamesDivisor(gamesPlayed, String(team.id).toUpperCase(), completedWeeks);
 
     const positions = Array.isArray(team.position)
       ? team.position
@@ -182,7 +198,7 @@ function transformPointsAllowed(mflData, completedWeeks) {
       if (isNaN(totalPoints)) continue;
 
       posData[posName] = {
-        avg: +(totalPoints / gamesPlayed).toFixed(1),
+        avg: +(totalPoints / divisor).toFixed(1),
       };
     }
 
@@ -260,7 +276,9 @@ async function main() {
     console.log('Fetching pointsAllowed from MFL...');
     const mflData = await fetchPointsAllowed(year, leagueId);
 
-    const fantasyPointsAllowed = transformPointsAllowed(mflData, completedWeeks);
+    const gamesPlayed = loadGamesPlayed(year, leagueName);
+    console.log(gamesPlayed ? '   Dividing by each team\'s games played.' : '   No schedule: dividing by completed weeks.');
+    const fantasyPointsAllowed = transformPointsAllowed(mflData, completedWeeks, gamesPlayed);
     const teamCount = Object.keys(fantasyPointsAllowed).length;
 
     if (teamCount < 30) {
@@ -302,4 +320,5 @@ async function main() {
   }
 }
 
-main();
+// Run only as a script, so a test can import transformPointsAllowed.
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) main();
