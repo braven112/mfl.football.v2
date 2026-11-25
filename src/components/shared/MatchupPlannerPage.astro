@@ -12,8 +12,12 @@
  *     stretch of weeks (Weeks 15–17, his playoffs, by default).
  *   - Points allowed: all 32 defenses by position, season or last 4 games.
  *
- * No client script: every filter, sort and week change is a link or a GET
- * form, so it works the same after a ClientRouter swap as on a fresh load.
+ * Position and week changes on the grid switch instantly in the browser:
+ * every week and every position's rows are rendered, and the script below
+ * shows the chosen ones and re-sorts by the stretch average. The pills are
+ * still real links (and the week picker a GET form), so a reload or a
+ * no-script load lands on the same view. Season/Last 4, the league and the
+ * view tabs load a new page, since every number changes.
  * Maths: utils/matchup-planner.ts; data: utils/matchup-planner-data.ts.
  */
 import PlayerCell from './PlayerCell.astro';
@@ -69,16 +73,22 @@ interface GridRow {
   espnId?: string;
   ppg: number | null;
   status?: string;
+  /** One cell per week of the season; the chosen range is shown, the rest hidden. */
   cells: MatchupCell[];
+  /** Stretch average over the chosen weeks (the script recomputes it on a change). */
   score: number | null;
+  /** Free agents only: among the top {@link FREE_AGENT_COUNT} at every position combined. */
+  topOverall?: boolean;
 }
+
+const inRange = (w: number) => w >= q.from && w <= q.to;
 
 function gridRow(id: string, status?: string): GridRow | null {
   const p = data!.players.get(id);
   if (!p || !p.team || p.team === 'FA') return null;
   const position = p.position as PlannerPosition;
-  if (q.pos !== 'all' && position !== q.pos) return null;
-  const cells = matchupCells(p, weeks, data!.schedule, summary!);
+  if (!PLANNER_POSITIONS.includes(position)) return null;
+  const cells = matchupCells(p, allWeeks, data!.schedule, summary!);
   return {
     id,
     name: p.name,
@@ -88,29 +98,40 @@ function gridRow(id: string, status?: string): GridRow | null {
     ppg: pointsPerGame(id, p.team, data!.scoresByWeek, data!.schedule).ppg,
     status,
     cells,
-    score: stretchScore(cells),
+    score: stretchScore(cells.filter((c) => inRange(c.week))),
   };
 }
 
+// One DOM order serves every filter: by position, then the stretch average.
+// "All" shows every group; a position shows its own group, already in order.
 const posOrder = (pos: string) => PLANNER_POSITIONS.indexOf(pos as PlannerPosition);
 const byScore = (a: GridRow, b: GridRow) => (b.score ?? -1) - (a.score ?? -1) || (b.ppg ?? 0) - (a.ppg ?? 0);
-const grouped = (rows: GridRow[]) =>
-  q.pos === 'all' ? rows.sort((a, b) => posOrder(a.position) - posOrder(b.position) || byScore(a, b)) : rows.sort(byScore);
+const grouped = (rows: GridRow[]) => rows.sort((a, b) => posOrder(a.position) - posOrder(b.position) || byScore(a, b));
+const showRow = (row: GridRow, mine: boolean) =>
+  q.pos === 'all' ? mine || !!row.topOverall : row.position === q.pos;
 
 const myRows = data && summary
   ? grouped([...data!.mine].map(([id, status]) => gridRow(id, status)).filter((r): r is GridRow => !!r))
   : [];
 
-const faRows = data && summary
-  ? grouped(
-      [...data!.players.keys()]
-        .filter((id) => !data!.rostered.has(id))
-        .map((id) => gridRow(id))
-        .filter((r): r is GridRow => !!r && r.ppg != null)
-        .sort((a, b) => (b.ppg ?? 0) - (a.ppg ?? 0))
-        .slice(0, FREE_AGENT_COUNT),
-    )
-  : [];
+// The top free agents overall (shown under All) and the top at each position
+// (shown under that position). Anyone in the overall top 25 is also in his
+// own position's top 25, so the union is one row per player.
+const faRows: GridRow[] = (() => {
+  if (!data || !summary) return [];
+  const pool = [...data.players.keys()]
+    .filter((id) => !data.rostered.has(id))
+    .map((id) => gridRow(id))
+    .filter((r): r is GridRow => !!r && r.ppg != null)
+    .sort((a, b) => (b.ppg ?? 0) - (a.ppg ?? 0));
+  const keep = new Set<GridRow>();
+  pool.slice(0, FREE_AGENT_COUNT).forEach((r) => {
+    r.topOverall = true;
+    keep.add(r);
+  });
+  for (const pos of PLANNER_POSITIONS) pool.filter((r) => r.position === pos).slice(0, FREE_AGENT_COUNT).forEach((r) => keep.add(r));
+  return grouped([...keep]);
+})();
 
 // Points-allowed table, softest defense at the sorted position first.
 const tableRows = summary
@@ -137,7 +158,13 @@ const presets = [
 const officialUsed = !!data?.official && q.window === 'season';
 ---
 
-<section class="mp" data-league={routeSlug}>
+<section
+  class="mp"
+  data-league={routeSlug}
+  data-mp-max-range={MAX_RANGE}
+  data-mp-default-from={PLAYOFF_WEEKS.from}
+  data-mp-default-to={PLAYOFF_WEEKS.to}
+>
   <header class="mp-head">
     <div>
       <h1 class="mp-title">Matchup Planner</h1>
@@ -171,13 +198,13 @@ const officialUsed = !!data?.official && q.window === 'season';
           <>
             <div class="ui-pills" role="group" aria-label="Weeks">
               {presets.map((p) => (
-                <a class="ui-pill" href={href({ from: p.from, to: p.to })} aria-current={p.from === q.from && p.to === q.to ? 'true' : undefined}>{p.label}</a>
+                <a class="ui-pill" href={href({ from: p.from, to: p.to })} data-mp-from={p.from} data-mp-to={p.to} aria-current={p.from === q.from && p.to === q.to ? 'true' : undefined}>{p.label}</a>
               ))}
             </div>
-            <form class="mp-range" method="get" action={path}>
+            <form class="mp-range" method="get" action={path} data-mp-range>
               {leagueParam && <input type="hidden" name="league" value={leagueParam} />}
               {q.window !== 'season' && <input type="hidden" name="window" value={q.window} />}
-              {q.pos !== 'all' && <input type="hidden" name="pos" value={q.pos} />}
+              <input type="hidden" name="pos" value={q.pos} disabled={q.pos === 'all'} data-mp-pos-input />
               <label>Week
                 <select name="from">
                   {allWeeks.map((w) => <option value={w} selected={w === q.from}>{w}</option>)}
@@ -191,9 +218,9 @@ const officialUsed = !!data?.official && q.window === 'season';
               <button type="submit" class="cta cta--ghost mp-go">Show</button>
             </form>
             <div class="ui-pills" role="group" aria-label="Position">
-              <a class="ui-pill" href={href({ pos: 'all' })} aria-current={q.pos === 'all' ? 'true' : undefined}>All</a>
+              <a class="ui-pill" href={href({ pos: 'all' })} data-mp-pos="all" aria-current={q.pos === 'all' ? 'true' : undefined}>All</a>
               {PLANNER_POSITIONS.map((p) => (
-                <a class="ui-pill" href={href({ pos: p })} aria-current={q.pos === p ? 'true' : undefined}>{POSITION_LABELS[p]}</a>
+                <a class="ui-pill" href={href({ pos: p })} data-mp-pos={p} aria-current={q.pos === p ? 'true' : undefined}>{POSITION_LABELS[p]}</a>
               ))}
             </div>
           </>
@@ -227,21 +254,25 @@ const officialUsed = !!data?.official && q.window === 'season';
                 {section.title}
                 {!section.mine && <span class="mp-h2-note">by points per game{slug === 'afl-fantasy' ? ', in your conference' : ''}</span>}
               </h2>
-              {section.rows.length === 0 ? (
-                <p class="mp-empty">{section.empty}</p>
-              ) : (
-                <table class="ui-table mp-grid" style={`--mp-weeks: ${weeks.length}`}>
+              <p class="mp-empty" data-mp-empty hidden={section.rows.some((r) => showRow(r, section.mine))}>{section.empty}</p>
+              {section.rows.length > 0 && (
+                <table class="ui-table mp-grid" style={`--mp-weeks: ${weeks.length}`} data-mp-grid>
                   <thead>
                     <tr>
                       <th scope="col" class="mp-grid-player">Player</th>
                       <th scope="col" class="mp-grid-ppg">PPG</th>
-                      {weeks.map((w) => <th scope="col" class="mp-grid-week">Wk {w}</th>)}
+                      {allWeeks.map((w) => <th scope="col" class="mp-grid-week" data-week={w} hidden={!inRange(w)}>Wk {w}</th>)}
                       <th scope="col" class="mp-grid-score" title="Average of what the opponents allow per game; a bye counts as 0">Avg</th>
                     </tr>
                   </thead>
                   <tbody>
                     {section.rows.map((row) => (
-                      <tr>
+                      <tr
+                        data-pos={row.position}
+                        data-top={section.mine || row.topOverall ? '1' : undefined}
+                        data-ppg={row.ppg ?? ''}
+                        hidden={!showRow(row, section.mine)}
+                      >
                         <td class="mp-grid-player">
                           <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} espnId={row.espnId} size="default">
                             {injuries[row.id] && (
@@ -257,16 +288,16 @@ const officialUsed = !!data?.official && q.window === 'season';
                         <td class="mp-grid-ppg" data-label="PPG">{fmt(row.ppg)}</td>
                         {row.cells.map((c) => (
                           c.bye ? (
-                            <td class="mp-cell mp-cell--bye">BYE</td>
+                            <td class="mp-cell mp-cell--bye" data-week={c.week} data-bye="1" hidden={!inRange(c.week)}>BYE</td>
                           ) : (
-                            <td class:list={['mp-cell', c.tier && `mp-tier-${c.tier}`]} title={`${c.home ? 'vs' : 'at'} ${code(c.opp!)}: allows ${fmt(c.avg)} to ${POSITION_LABELS[row.position]}s per game, rank ${c.rank ?? '—'} of ${teamCount}`}>
+                            <td class:list={['mp-cell', c.tier && `mp-tier-${c.tier}`]} data-week={c.week} data-pts={c.avg ?? ''} hidden={!inRange(c.week)} title={`${c.home ? 'vs' : 'at'} ${code(c.opp!)}: allows ${fmt(c.avg)} to ${POSITION_LABELS[row.position]}s per game, rank ${c.rank ?? '—'} of ${teamCount}`}>
                               <span class="mp-opp">{c.home ? '' : '@'}{code(c.opp!)}</span>
                               <span class="mp-pts">{fmt(c.avg)}</span>
                               <span class="mp-rank">#{c.rank ?? '—'}</span>
                             </td>
                           )
                         ))}
-                        <td class="mp-grid-score">{fmt(row.score)}</td>
+                        <td class="mp-grid-score" data-mp-score>{fmt(row.score)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -275,7 +306,7 @@ const officialUsed = !!data?.official && q.window === 'season';
             </section>
           ))}
           <p class="mp-note">
-            Each cell is the opponent (@ = away), the points it gives up per game to that position, and its rank (#32 gives up the most). Avg is what those opponents give up per game across Weeks {q.from}–{q.to}, with a bye counted as 0. Up to {MAX_RANGE} weeks at a time.
+            Each cell is the opponent (@ = away), the points it gives up per game to that position, and its rank (#32 gives up the most). Avg is what those opponents give up per game across Weeks <span data-mp-range-text>{q.from}–{q.to}</span>, with a bye counted as 0. Up to {MAX_RANGE} weeks at a time.
           </p>
         </>
       ) : (
@@ -328,6 +359,149 @@ const officialUsed = !!data?.official && q.window === 'season';
     </>
   )}
 </section>
+
+<script>
+  // Instant position and week switching for the schedule grid (see the
+  // header comment). Bound on every astro:page-load to the planner the swap
+  // just rendered; the root's flag stops a second bind of the same DOM.
+  function initMatchupPlanner() {
+    const root = document.querySelector<HTMLElement>('.mp[data-league]');
+    if (!root || root.dataset.mpInit) return;
+    const grids = Array.from(root.querySelectorAll<HTMLTableElement>('[data-mp-grid]'));
+    if (!grids.length) return;
+    root.dataset.mpInit = '1';
+    const host: HTMLElement = root;
+
+    const maxRange = Number(root.dataset.mpMaxRange) || 5;
+    const defaultFrom = Number(root.dataset.mpDefaultFrom);
+    const defaultTo = Number(root.dataset.mpDefaultTo);
+    const params = new URLSearchParams(location.search);
+    const state = {
+      pos: params.get('pos') || 'all',
+      from: Number(params.get('from')) || defaultFrom,
+      to: Number(params.get('to')) || defaultTo,
+    };
+    // The server clamped the range; read what it actually rendered.
+    const shown = Array.from(grids[0].querySelectorAll<HTMLElement>('thead [data-week]:not([hidden])')).map((th) => Number(th.dataset.week));
+    if (shown.length) {
+      state.from = Math.min(...shown);
+      state.to = Math.max(...shown);
+    }
+    const positions = Array.from(root.querySelectorAll<HTMLElement>('[data-mp-pos]')).map((a) => a.dataset.mpPos!);
+    if (!positions.includes(state.pos)) state.pos = 'all';
+    const posRank = (pos: string) => positions.indexOf(pos);
+
+    const inRange = (w: number) => w >= state.from && w <= state.to;
+    const fmt = (v: number | null) => (v == null ? '—' : v.toFixed(1));
+
+    function rowScore(tr: HTMLElement): number | null {
+      const cells = Array.from(tr.querySelectorAll<HTMLElement>('td[data-week]')).filter((td) => inRange(Number(td.dataset.week)));
+      if (!cells.length) return null;
+      let sum = 0;
+      for (const td of cells) {
+        if (td.dataset.bye) continue;
+        if (td.dataset.pts === '' || td.dataset.pts == null) return null;
+        sum += Number(td.dataset.pts);
+      }
+      return Math.round((sum / cells.length) * 10) / 10;
+    }
+
+    function setParam(url: URL) {
+      if (state.pos === 'all') url.searchParams.delete('pos');
+      else url.searchParams.set('pos', state.pos);
+      if (state.from === defaultFrom && state.to === defaultTo) {
+        url.searchParams.delete('from');
+        url.searchParams.delete('to');
+      } else {
+        url.searchParams.set('from', String(state.from));
+        url.searchParams.set('to', String(state.to));
+      }
+    }
+
+    function apply() {
+      for (const table of grids) {
+        table.style.setProperty('--mp-weeks', String(state.to - state.from + 1));
+        for (const el of Array.from(table.querySelectorAll<HTMLElement>('[data-week]'))) el.hidden = !inRange(Number(el.dataset.week));
+        const body = table.tBodies[0];
+        const rows = Array.from(body.rows);
+        const scored = rows.map((tr) => ({ tr, score: rowScore(tr), ppg: Number(tr.dataset.ppg) || 0, pos: posRank(tr.dataset.pos || '') }));
+        scored.sort((a, b) => a.pos - b.pos || (b.score ?? -1) - (a.score ?? -1) || b.ppg - a.ppg);
+        let visible = 0;
+        for (const r of scored) {
+          const cell = r.tr.querySelector<HTMLElement>('[data-mp-score]');
+          if (cell) cell.textContent = fmt(r.score);
+          r.tr.hidden = state.pos === 'all' ? r.tr.dataset.top !== '1' : r.tr.dataset.pos !== state.pos;
+          if (!r.tr.hidden) visible += 1;
+          body.appendChild(r.tr);
+        }
+        const empty = table.closest('section')?.querySelector<HTMLElement>('[data-mp-empty]');
+        if (empty) empty.hidden = visible > 0;
+      }
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('[data-mp-pos]'))) {
+        a.toggleAttribute('aria-current', a.dataset.mpPos === state.pos);
+        if (a.hasAttribute('aria-current')) a.setAttribute('aria-current', 'true');
+      }
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('[data-mp-from]'))) {
+        const on = Number(a.dataset.mpFrom) === state.from && Number(a.dataset.mpTo) === state.to;
+        if (on) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      }
+      const form = host.querySelector<HTMLFormElement>('[data-mp-range]');
+      if (form) {
+        (form.elements.namedItem('from') as HTMLSelectElement).value = String(state.from);
+        (form.elements.namedItem('to') as HTMLSelectElement).value = String(state.to);
+        const posInput = form.querySelector<HTMLInputElement>('[data-mp-pos-input]');
+        if (posInput) {
+          posInput.value = state.pos;
+          posInput.disabled = state.pos === 'all';
+        }
+      }
+      for (const el of Array.from(host.querySelectorAll<HTMLElement>('[data-mp-range-text]'))) el.textContent = `${state.from}–${state.to}`;
+      // Every other link on the page (league, Season/Last 4, the view tabs)
+      // keeps the chosen position and weeks.
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('a[href]:not([data-mp-pos]):not([data-mp-from])'))) {
+        const url = new URL(a.href, location.href);
+        if (url.pathname !== location.pathname) continue;
+        setParam(url);
+        a.href = url.pathname + url.search;
+      }
+      const here = new URL(location.href);
+      setParam(here);
+      history.replaceState(history.state, '', here.pathname + here.search + here.hash);
+    }
+
+    root.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-mp-pos], a[data-mp-from]');
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      if (a.dataset.mpPos) state.pos = a.dataset.mpPos;
+      else {
+        state.from = Number(a.dataset.mpFrom);
+        state.to = Number(a.dataset.mpTo);
+      }
+      apply();
+    });
+
+    const rangeForm = root.querySelector<HTMLFormElement>('[data-mp-range]');
+    // Picking a week applies at once, so the Show button is only for a load
+    // without this script.
+    rangeForm?.querySelector<HTMLElement>('.mp-go')?.setAttribute('hidden', '');
+    rangeForm?.addEventListener('change', () => rangeForm.requestSubmit());
+    rangeForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      let from = Number((form.elements.namedItem('from') as HTMLSelectElement).value);
+      let to = Number((form.elements.namedItem('to') as HTMLSelectElement).value);
+      if (from > to) [from, to] = [to, from];
+      if (to - from + 1 > maxRange) to = from + maxRange - 1;
+      state.from = from;
+      state.to = to;
+      apply();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initMatchupPlanner);
+</script>
 
 <style>
   .mp {
@@ -558,6 +732,16 @@ const officialUsed = !!data?.official && q.window === 'season';
     text-decoration: underline;
     text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
     text-underline-offset: 2px;
+  }
+  /* Weeks outside the chosen range and rows outside the chosen position. The
+     phone layout gives some cells a display value, which would beat the
+     browser's own [hidden] rule. */
+  .mp-grid tr[hidden],
+  .mp-grid tr > [hidden] {
+    display: none;
+  }
+  .mp-range .mp-go[hidden] {
+    display: none;
   }
   .mp-table tfoot td,
   .mp-table tfoot th {
