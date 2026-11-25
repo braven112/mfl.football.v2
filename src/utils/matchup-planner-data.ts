@@ -9,7 +9,7 @@
 
 import { getLeagueBySlug, type LeagueDefinition } from '../config/leagues';
 import { getCurrentLeagueYear } from './league-year';
-import { leagueFeedPath, preloadLeagueData, readLeagueDataSync } from './league-data';
+import { leagueFeedPath, onLeagueDataChange, preloadLeagueData, readLeagueDataSync } from './league-data';
 import { buildMflExportUrl } from './mfl-url';
 import { fetchWithTimeout } from './fetch-with-timeout';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
@@ -32,6 +32,10 @@ const FEEDS = ['nflSchedule-full.json', 'players.json', 'playerScores-by-week.js
 /** MFL's season totals change once a game ends; half an hour is plenty fresh. */
 const OFFICIAL_TTL_MS = 30 * 60 * 1000;
 const officialCache = new Map<string, { at: number; totals: TeamPositionPoints }>();
+// A data sync moved the live pointer (a new week landed): fetch MFL's totals fresh.
+onLeagueDataChange(() => {
+  officialCache.clear();
+});
 
 async function loadOfficialTotals(league: LeagueDefinition, year: number): Promise<TeamPositionPoints | null> {
   const key = `${league.id}:${year}`;
