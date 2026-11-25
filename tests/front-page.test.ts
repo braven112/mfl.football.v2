@@ -233,9 +233,20 @@ describe('the series in a league that renumbers its franchises', () => {
   const history = JSON.parse(readFileSync('data/archies/derived/league-history.json', 'utf8'));
   const ix = recordBook(history).ix;
 
-  it("matches the derived Archie's history (Pirates vs Jackalopes is 0–1, not 2–1)", () => {
-    const f = rivalryFacts(meetingsBetween(ix, '0079', '0013'));
-    expect(f).toMatchObject({ meetings: 1, wins: 0, losses: 1 });
+  // Pinned on the INVARIANT, not a running tally: the two teams keep playing
+  // each other in-season (2026 wk 11 turned 0–1 into 1–1), and the derived
+  // chain is recomputed by a bot, so a hard-coded record goes stale every
+  // time they meet again. What must hold is that no pre-2026 (Chickens-era)
+  // game is ever counted, and that the first counted meeting is the 2026
+  // wk 4 loss.
+  it("never counts a Chickens-era game in Pirates vs Jackalopes", () => {
+    const meetings = meetingsBetween(ix, '0079', '0013') ?? [];
+    expect(meetings.length).toBeGreaterThan(0);
+    expect(meetings.every((m) => m.year >= 2026)).toBe(true);
+    const f = rivalryFacts(meetings);
+    expect(f.wins + f.losses + f.ties).toBe(f.meetings);
+    const first = [...meetings].sort((a, b) => a.year - b.year || a.week - b.week)[0];
+    expect(first).toMatchObject({ year: 2026, week: 4, result: 'L' });
   });
 
   it('is undefined with no League History dataset', () => {
