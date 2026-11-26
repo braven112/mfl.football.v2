@@ -35,6 +35,8 @@ export interface AskChart {
   field: string;
   label: string;
   asc: boolean;
+  /** Set when the board keeps the query's own order (not a record board): the field it is ranked by. */
+  orderedBy?: string;
   rows: Array<{ value: number; display: string; name: string; owner: string | null; context: string; year: number | null; rank: number; franchiseId: string | null; entity: { key: null } }>;
   population: Array<Array<number | string | null>>;
   /** 'compare': a what-if's real-against-replay chart (what-if.mjs), drawn from `compare`. */

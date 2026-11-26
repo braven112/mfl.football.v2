@@ -524,7 +524,7 @@ export function normalizeQuery(q) {
 /**
  * @typedef {{ cells: Array<string | number | boolean | null>, franchiseId: string | null, ownerSlug: string | null, year: number | null }} AnswerRow
  * @typedef {{ min: number, max: number, avg: number, sum: number }} FieldSummary
- * @typedef {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> }} ChartBoard
+ * @typedef {{ field: string, label: string, asc: boolean, orderedBy?: string, rows: Array<any>, population: Array<Array<number|string|null>> }} ChartBoard
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
@@ -739,7 +739,7 @@ const CHART_POPULATION = 1500;
  * week) is thinned to CHART_POPULATION, always keeping the top ten and every
  * row that set a new best on its way to the record, so the progression line
  * stays exact.
- * @returns {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> } | null}
+ * @returns {{ field: string, label: string, asc: boolean, orderedBy?: string, rows: Array<any>, population: Array<Array<number|string|null>> } | null}
  */
 function chartBoard(q, rows) {
   const field = q.chart;
