@@ -524,7 +524,7 @@ export function normalizeQuery(q) {
 /**
  * @typedef {{ cells: Array<string | number | boolean | null>, franchiseId: string | null, ownerSlug: string | null, year: number | null }} AnswerRow
  * @typedef {{ min: number, max: number, avg: number, sum: number }} FieldSummary
- * @typedef {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> }} ChartBoard
+ * @typedef {{ field: string, label: string, asc: boolean, orderedBy?: string, rows: Array<any>, population: Array<Array<number|string|null>> }} ChartBoard
  * @typedef {{ query: any, description: string, total: number, columns: Array<{ key: string, label: string }>, rows: AnswerRow[], summary: Record<string, FieldSummary | null>, chart: ChartBoard | null }} QueryResult
  * @param {any} ds league-history.json
  * @param {any} rawQuery
@@ -739,14 +739,24 @@ const CHART_POPULATION = 1500;
  * week) is thinned to CHART_POPULATION, always keeping the top ten and every
  * row that set a new best on its way to the record, so the progression line
  * stays exact.
- * @returns {{ field: string, label: string, asc: boolean, rows: Array<any>, population: Array<Array<number|string|null>> } | null}
+ * @returns {{ field: string, label: string, asc: boolean, orderedBy?: string, rows: Array<any>, population: Array<Array<number|string|null>> } | null}
  */
 function chartBoard(q, rows) {
   const field = q.chart;
-  const asc = q.sort[0]?.field === field ? q.sort[0].dir === 'asc' : false;
+  // The chart must show the games the answer is about. When the query ranks
+  // by something else (importance, then closest margin; the closest title
+  // games charted by margin), re-ranking by the charted field drew the
+  // OPPOSITE list: "most interesting game" answered with a 0.92-point title
+  // game under a chart of the ten biggest blowouts. So only a query sorted by
+  // the charted field first is a record board; any other keeps the query's
+  // own order, the rows the answer cites, and draws no record progression.
+  const ordered = q.sort.length > 0 && q.sort[0].field !== field;
+  const own = q.sort.find((s) => s.field === field);
+  const asc = own ? own.dir === 'asc' : false;
   const valued = rows.filter((r) => Number.isFinite(r[field]));
   if (valued.length < 2) return null;
-  const ranked = valued.slice().sort((a, b) => (asc ? a[field] - b[field] : b[field] - a[field]));
+  // `rows` arrive in the query's sorted order (runQuery sorts before charting).
+  const ranked = ordered ? valued : valued.slice().sort((a, b) => (asc ? a[field] - b[field] : b[field] - a[field]));
   const integers = valued.every((r) => Number.isInteger(r[field]));
   const display = (v) =>
     field === 'winPct'
@@ -766,7 +776,7 @@ function chartBoard(q, rows) {
       owner: ownerOf(r),
       context: contextOf(r),
       year: r.year ?? null,
-      rank: prev && prev.value === r[field] ? prev.rank : i + 1,
+      rank: !ordered && prev && prev.value === r[field] ? prev.rank : i + 1,
       franchiseId: r._franchiseId ?? null,
       entity: { key: null },
     });
@@ -795,6 +805,8 @@ function chartBoard(q, rows) {
     field,
     label: FIELDS[q.unit][field].label,
     asc,
+    // Set when the board keeps the query's order: what it is ranked by.
+    ...(ordered ? { orderedBy: FIELDS[q.unit][q.sort[0].field]?.label ?? q.sort[0].field } : {}),
     rows: top,
     population: keep.map((r) => [r[field], r.year ?? null, r.week ?? null, nameOf(r), null]),
   };
