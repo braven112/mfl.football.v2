@@ -19,6 +19,7 @@ import { recordBook } from '../src/utils/league-history/records.mjs';
 import { tradeDeadlineIsoDate } from '../src/utils/trade-deadline.mjs';
 import { describeMissingWeeks } from '../src/utils/league-history/ask-players.mjs';
 import { gapChart, historyChart } from '../src/utils/league-history/record-charts.mjs';
+import { answerCharts } from '../src/utils/league-history/ask-format.mjs';
 
 const TL = { history: theleague, players: theleaguePlayers, moves: theleagueMoves };
 const AFL = { history: afl, players: aflPlayers, moves: aflMoves };
@@ -279,6 +280,28 @@ describe('charts', () => {
     expect(r.chart!.population.length).toBeLessThanOrEqual(1600);
     const values = r.chart!.population.map((p) => p[0]);
     expect(Math.max(...(values as number[]))).toBe(r.chart!.rows[0].value);
+  });
+
+  // Buck answered "most interesting game" with the closest title game, while
+  // the chart re-ranked the same query by margin and drew the ten biggest
+  // blowouts (2026-11-26). A query ranked by something else keeps its order.
+  it('charts the games the answer cites, in its order, when the query ranks by another field', () => {
+    const q = { unit: 'rivalryGames', sort: [{ field: 'importance', dir: 'desc' }], limit: 5, chart: 'margin', columns: ['year', 'week', 'team', 'score', 'opponent', 'oppScore', 'margin'] };
+    const r = runQuery(afl, q, { players: aflPlayers });
+    const m = r.columns.findIndex((c) => c.key === 'margin');
+    expect(r.chart!.orderedBy).toBe('Importance');
+    expect(r.chart!.rows.slice(0, 5).map((x: any) => x.value)).toEqual(r.rows.map((x) => x.cells[m]));
+    expect(r.chart!.rows[0].rank).toBe(1);
+    const charts = answerCharts(r.chart, '/afl-fantasy/history');
+    expect(charts).toHaveLength(1);
+    expect(charts[0].title).toMatch(/by importance/);
+    expect(charts[0].title).not.toMatch(/^Top/);
+  });
+
+  it('keeps the record board when the query is sorted by the charted field', () => {
+    const r = runQuery(afl, { unit: 'rivalryGames', sort: [{ field: 'margin', dir: 'desc' }], chart: 'margin' }, { players: aflPlayers });
+    expect(r.chart!.orderedBy).toBeUndefined();
+    expect(answerCharts(r.chart, '/afl-fantasy/history').length).toBeGreaterThan(1);
   });
 
   it('refuses to chart a field that is not a number', () => {

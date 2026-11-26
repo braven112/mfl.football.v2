@@ -79,10 +79,17 @@ export function answerCharts(chart, base) {
   // One dot per entity reads for a league's owners, not for every player ever rostered.
   const oneLine = !bySeason && chart.population.length <= 120;
   const out = [];
-  for (const [title, draw] of [
-    [`${chart.asc ? 'Lowest' : 'Top'} ${Math.min(10, chart.rows.length)} by ${chart.label}`, gapChart],
-    ...(bySeason || oneLine ? [[bySeason ? 'Every result, season by season' : 'Everyone on one line', historyChart]] : []),
-  ]) {
+  const n = Math.min(10, chart.rows.length);
+  // A board in the answer's own order (ask-query.mjs chartBoard orderedBy) is
+  // not a record: one chart, the answer's rows in its order, and no
+  // season-by-season record line, which would chart a different question.
+  const charts = chart.orderedBy
+    ? [[`${chart.label}, the top ${n} by ${String(chart.orderedBy).toLowerCase()}`, gapChart]]
+    : [
+        [`${chart.asc ? 'Lowest' : 'Top'} ${n} by ${chart.label}`, gapChart],
+        ...(bySeason || oneLine ? [[bySeason ? 'Every result, season by season' : 'Everyone on one line', historyChart]] : []),
+      ];
+  for (const [title, draw] of charts) {
     const wide = draw(chart, WIDE_W, { href });
     if (!wide) continue;
     const phone = draw(chart, PHONE_W, { href }) ?? wide;

@@ -103,7 +103,9 @@ export function gapChart(board, W, opts = {}) {
   const spread = Math.abs(top[1].value - top[top.length - 1].value);
   const span = Math.abs(top[0].value - top[top.length - 1].value);
   let take;
-  if (gap === 0) take = `Shared at the top: ${top.filter((r) => r.rank === 1).length} hold the record, and the top ${top.length} span ${fmt(span)}.`;
+  // A board in the answer's order is not a record: say what it is ranked by.
+  if (board.orderedBy) take = `Ranked as the answer ranks them, by ${String(board.orderedBy).toLowerCase()}; #1 is the one it names.`;
+  else if (gap === 0) take = `Shared at the top: ${top.filter((r) => r.rank === 1).length} hold the record, and the top ${top.length} span ${fmt(span)}.`;
   else if (spread === 0 && top.length > 2) {
     const tied = board.population.filter((p) => p[0] === top[1].value).length || top.length - 1;
     take = `The record is ${fmt(gap)} clear of the ${tied} tied for #2.`;
