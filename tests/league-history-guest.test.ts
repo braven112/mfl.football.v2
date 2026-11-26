@@ -27,7 +27,7 @@ const fakeRedis = {
 };
 vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => (redisUp ? fakeRedis : null) }));
 
-const { buildNameMasker, ownerStandIns, isGuestMaskedPath, maskJson } = await import('../src/utils/league-history/guest-names.mjs');
+const { buildNameMasker, ownerStandIns, isGuestMaskedPath, teamNamePathLeague, maskJson } = await import('../src/utils/league-history/guest-names.mjs');
 const guest = await import('../src/utils/league-history/guest-ask');
 
 const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
@@ -48,6 +48,16 @@ const leaks = (text: string) =>
 		const after = single ? '(?![\\p{L}\\p{N}]|\\s+\\p{Lu})' : '(?![\\p{L}\\p{N}])';
 		return new RegExp(`${before}${name}${after}`, 'u').test(text);
 	});
+
+describe('team names for everyone (Brandon, 2026-11-26)', () => {
+	it('covers every league\'s history, franchise and rivalry pages, never owner pages', () => {
+		expect(teamNamePathLeague('/theleague/history/records')).toBe('theleague');
+		expect(teamNamePathLeague('/afl-fantasy/franchises/0004')).toBe('afl-fantasy');
+		expect(teamNamePathLeague('/afl-fantasy/rivalries')).toBe('afl-fantasy');
+		expect(teamNamePathLeague('/theleague/owners/todd-gibel')).toBeNull();
+		expect(teamNamePathLeague('/theleague/rosters')).toBeNull();
+	});
+});
 
 describe('owner name masking', () => {
 	it('gives every owner their best-known team’s name, never "<Team> Owner"', () => {

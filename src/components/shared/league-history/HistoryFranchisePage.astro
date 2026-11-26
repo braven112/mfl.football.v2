@@ -254,10 +254,12 @@ const priorNames = [
           {!h.active && ` · last played ${h.lastYear}`}
         </p>
         <h1 class="hf-hero__name">{h.name}</h1>
-        {h.owner && !h.owner.key.startsWith('slot:') && (
+        {/* Owners read as their team on history pages (Brandon, 2026-11-26), so
+            the hero links to the person's page rather than printing
+            "Owner: <the team's own name>". */}
+        {h.owner && !h.owner.key.startsWith('slot:') && (ownerHref(h.owner) || isMine) && (
           <p class="hf-hero__owner">
-            {h.active ? 'Owner' : 'Last owner'}:{' '}
-            {ownerHref(h.owner) ? <a href={ownerHref(h.owner)}>{h.owner.name}</a> : h.owner.name}
+            {ownerHref(h.owner) && <a href={ownerHref(h.owner)}>{h.active ? 'Owner page' : 'Last owner’s page'} ›</a>}
             {isMine && <span class="hf-hero__you">Your team</span>}
           </p>
         )}

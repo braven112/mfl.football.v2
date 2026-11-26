@@ -34,6 +34,21 @@ export const GUEST_MASKED_LEAGUES = ['theleague'];
  */
 const SECTIONS = ['history', 'franchises', 'owners', 'rivalries'];
 
+/**
+ * Team names for everyone (Brandon, 2026-11-26: "I want to use franchise
+ * names even when signed in, it feels more natural than referring to an
+ * owner's name"): every league's history home, Record Book, Buck's answers,
+ * franchise and rivalry pages read owners as their team, signed in or not.
+ * Owner pages are left out, because they exist to show the person.
+ */
+const TEAM_NAME_SECTIONS = ['history', 'franchises', 'rivalries'];
+
+/** The league slug when `pathname` is a section that names owners by team, else null. */
+export function teamNamePathLeague(pathname) {
+  const m = /^\/([\w-]+)\/([\w-]+)(?:\/|$)/.exec(pathname ?? '');
+  return m && TEAM_NAME_SECTIONS.includes(m[2]) ? m[1] : null;
+}
+
 export function isGuestMaskedPath(pathname) {
   const m = /^\/([\w-]+)\/([\w-]+)(?:\/|$)/.exec(pathname ?? '');
   return Boolean(m && GUEST_MASKED_LEAGUES.includes(m[1]) && SECTIONS.includes(m[2]));

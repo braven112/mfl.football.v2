@@ -64,3 +64,15 @@ team they are best known for), never a personal name, even when the asker
 used one. Owner names stay in the data so "how has Todd done" still finds
 him. Pinned in `tests/league-history-ask.test.ts`. History pages keep owner
 names unless Brandon widens it.
+
+## 2026-11-26 — team names on every History page, signed in or not
+
+Brandon picked "Buck and all History pages" on the card. The middleware now
+runs the same owner → team masker (`teamNameMasker`, guest-mask.ts) over every
+league's history, franchise and rivalry pages for EVERYONE
+(`teamNamePathLeague`, guest-names.mjs). Owner pages keep real names for
+signed-in owners, because they exist to show the person (guests still see
+them masked on TheLeague). Team-names mode fails OPEN and leaves the cache
+headers alone, since it is the same page for every viewer; guest mode still
+fails closed and is `private, no-store`. The franchise hero no longer prints
+"Owner: <name>" (it would read "Owner: Smokane FC"): it links "Owner page ›".

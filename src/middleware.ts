@@ -53,7 +53,7 @@ import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
 import { preloadRequestLeagueData } from './utils/request-league-data';
-import { isGuestMaskedPath } from './utils/league-history/guest-names.mjs';
+import { isGuestMaskedPath, teamNamePathLeague } from './utils/league-history/guest-names.mjs';
 import { maskHtmlResponse } from './utils/league-history/guest-mask';
 
 // The custom-site demo's MFL stand-in. `__DEMO_BUILD__` is a compile-time
@@ -228,11 +228,19 @@ const handle: MiddlewareHandler = async (context, next) => {
   // is the public Ask the History demo (src/utils/league-history/guest-names.mjs).
   // Decided on the INTERNAL path, so the apex host and the prefixed path agree.
   const guestMask = async (internalPath: string, response: Response): Promise<Response> => {
-    if (context.isPrerendered || !isGuestMaskedPath(internalPath)) return response;
+    if (context.isPrerendered) return response;
+    const teamSlug = teamNamePathLeague(internalPath);
+    if (!isGuestMaskedPath(internalPath)) {
+      // Everyone else reads owners as their team on the history pages (not owner pages).
+      return teamSlug && getLeagueBySlug(teamSlug) ? maskHtmlResponse(response, teamSlug, 'team-names') : response;
+    }
     const slug = internalPath.split('/')[1];
     const league = getLeagueBySlug(slug);
-    // Real names are for that league's own signed-in owners only.
-    if (league && franchiseIdForLeague(getAuthUser(context.request), league.id)) return response;
+    // Real names are for that league's own signed-in owners only, and even
+    // they read owners as teams outside the owner pages.
+    if (league && franchiseIdForLeague(getAuthUser(context.request), league.id)) {
+      return teamSlug ? maskHtmlResponse(response, slug, 'team-names') : response;
+    }
     return maskHtmlResponse(response, slug);
   };
 

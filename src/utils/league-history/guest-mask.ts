@@ -25,6 +25,11 @@ export function isGuestMaskedLeague(slug: string): boolean {
 /** The league's masker, or null for a league whose names are not hidden. */
 export function guestMasker(slug: string): Promise<NameMasker> | null {
   if (!isGuestMaskedLeague(slug)) return null;
+  return teamNameMasker(slug);
+}
+
+/** Any registry league's owner → team-name masker (null for an unknown slug). */
+export function teamNameMasker(slug: string): Promise<NameMasker> | null {
   let m = maskers.get(slug);
   if (!m) {
     const league = getLeagueBySlug(slug);
@@ -59,15 +64,17 @@ export const MASKED_HEADER = 'x-owner-names';
  * is touched; a response already masked (the middleware re-runs on a
  * rewrite) passes through.
  */
-export async function maskHtmlResponse(response: Response, slug: string): Promise<Response> {
+export async function maskHtmlResponse(response: Response, slug: string, mode: 'guest' | 'team-names' = 'guest'): Promise<Response> {
   if (response.headers.get(MASKED_HEADER) === 'hidden') return response;
   if (!(response.headers.get('content-type') ?? '').includes('text/html')) return response;
-  const masker = guestMasker(slug);
+  const masker = mode === 'guest' ? guestMasker(slug) : teamNameMasker(slug);
   if (!masker) return response;
   let mask: NameMasker;
   try {
     mask = await masker;
   } catch (e) {
+    // Team names for a signed-in owner are a style, not a secret: serve the page as is.
+    if (mode === 'team-names') return response;
     console.error('[guest-mask] owner list unavailable:', e);
     return new Response('This page is unavailable right now. Try again in a minute.', {
       status: 503,
@@ -78,8 +85,9 @@ export async function maskHtmlResponse(response: Response, slug: string): Promis
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   headers.set(MASKED_HEADER, 'hidden');
-  // A masked page and a real one share a URL; neither may be cached for the other.
-  headers.set('Cache-Control', 'private, no-store');
+  // A guest's masked page and an owner's real one share a URL; neither may be
+  // cached for the other. Team names are the same page for everyone.
+  if (mode === 'guest') headers.set('Cache-Control', 'private, no-store');
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
