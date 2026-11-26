@@ -224,7 +224,7 @@ const handle: MiddlewareHandler = async (context, next) => {
   }
 
   // 5. Owner names: a signed-out visitor to TheLeague's history section sees
-  // every owner as a stand-in ("Bring The Pain Owner"), never a real name — it
+  // every owner as a stand-in ("Bring The Pain", the team name alone), never a real name — it
   // is the public Ask the History demo (src/utils/league-history/guest-names.mjs).
   // Decided on the INTERNAL path, so the apex host and the prefixed path agree.
   const guestMask = async (internalPath: string, response: Response): Promise<Response> => {

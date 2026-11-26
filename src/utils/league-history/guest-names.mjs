@@ -6,8 +6,10 @@
  * TheLeague's history is the public Ask the History demo: strangers ask
  * questions about a real league. Its owners are real people, so to anyone
  * without a session every owner's name becomes a stand-in built from the team
- * they are best known for ("Bring The Pain Owner"). Signed-in owners still
- * see real names.
+ * they are best known for ("Bring The Pain"). Signed-in owners still see
+ * real names. The stand-in is the bare team name, never "<Team> Owner"
+ * (Brandon, 2026-11-26: "we don't say Vitside Mafia owner, that sounds
+ * weird"): the league calls each other by team.
  *
  * Two places apply it, both from this one module:
  *  - the middleware, on every HTML page of the history section
@@ -50,7 +52,7 @@ function spellings(name) {
 
 /**
  * [realName, standIn] for every owner. The stand-in is the owner's best-known
- * team plus "Owner"; two owners of one team (co-owners, or one name held in two
+ * team name; two owners of one team (co-owners, or one name held in two
  * tenures) share it, which is the truth of who they were.
  */
 export function ownerStandIns(tenures) {
@@ -59,7 +61,7 @@ export function ownerStandIns(tenures) {
     const real = String(o?.displayName ?? '').trim();
     const team = String(o?.dominantName ?? '').trim();
     if (real.length < 2 || !team) continue;
-    pairs.push([real, `${team} Owner`]);
+    pairs.push([real, team]);
   }
   return pairs;
 }
@@ -68,7 +70,8 @@ export function ownerStandIns(tenures) {
  * A function that swaps every owner name in a string for its stand-in.
  * Full names first, so "Nate Rich" is replaced whole before the one-word
  * owner "Rich" is considered; whole words only, so "Dan" never eats "Dangsters".
- * Co-owners written "A & B" who share a stand-in collapse to "<Team> Owners".
+ * Co-owners written "A & B" who share a stand-in collapse to one team name,
+ * and so does "Team (Team)" — a real name shown beside its own team.
  */
 export function buildNameMasker(pairs) {
   const byName = new Map();
@@ -85,12 +88,14 @@ export function buildNameMasker(pairs) {
     full.length && new RegExp(`(?<![\\p{L}\\p{N}])(?:${alt(full)})(?![\\p{L}\\p{N}])`, 'gu'),
     single.length && new RegExp(`(?<![\\p{L}\\p{N}]|,\\s)(?:${alt(single)})(?![\\p{L}\\p{N}]|\\s+\\p{Lu})`, 'gu'),
   ].filter(Boolean);
-  const pairRe = /([^<>"&\n]{1,80}?) Owner (?:&amp;|&|and|\+) \1 Owner\b/g;
+  const teams = alt([...new Set(byName.values())].sort((a, b) => b.length - a.length));
+  const pairRe = new RegExp(`(?<![\\p{L}\\p{N}])(${teams}) (?:&amp;|&|and|\\+) \\1(?![\\p{L}\\p{N}])`, 'gu');
+  const echoRe = new RegExp(`(?<![\\p{L}\\p{N}])(${teams}) \\(\\1\\)`, 'gu');
   return (text) => {
     if (typeof text !== 'string' || !text) return text;
     let out = text;
     for (const re of res) out = out.replace(re, (m) => byName.get(m) ?? m);
-    return out.replace(pairRe, '$1 Owners');
+    return out.replace(pairRe, '$1').replace(echoRe, '$1');
   };
 }
 

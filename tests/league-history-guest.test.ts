@@ -50,28 +50,28 @@ const leaks = (text: string) =>
 	});
 
 describe('owner name masking', () => {
-	it('gives every owner a stand-in from their best-known team', () => {
-		expect(mask('Todd Gibel won it all')).toBe('Bring The Pain Owner won it all');
+	it('gives every owner their best-known team’s name, never "<Team> Owner"', () => {
+		expect(mask('Todd Gibel won it all')).toBe('Bring The Pain won it all');
 		expect(ownerStandIns(tenures)).toHaveLength(realNames.length);
 	});
 
 	it('replaces the longest name first and only whole words', () => {
 		const m = buildNameMasker([
-			['Nate Rich', 'Gridiron Geeks Owner'],
-			['Rich', 'Music City Mafia Owner'],
-			['Dan', 'Some Team Owner'],
+			['Nate Rich', 'Gridiron Geeks'],
+			['Rich', 'Music City Mafia'],
+			['Dan', 'Some Team'],
 		]);
-		expect(m('Nate Rich beat Rich')).toBe('Gridiron Geeks Owner beat Music City Mafia Owner');
+		expect(m('Nate Rich beat Rich')).toBe('Gridiron Geeks beat Music City Mafia');
 		expect(m('Da Dangsters')).toBe('Da Dangsters');
 		expect(m('Richardson')).toBe('Richardson');
 	});
 
 	it('leaves NFL players who share a one-word owner’s name alone', () => {
-		const m = buildNameMasker([['Mike', 'Fire Ready Aim Owner']]);
+		const m = buildNameMasker([['Mike', 'Fire Ready Aim']]);
 		expect(m('Mike Evans')).toBe('Mike Evans');
 		expect(m('Evans, Mike (WR)')).toBe('Evans, Mike (WR)');
-		expect(m('<td>Mike</td>')).toBe('<td>Fire Ready Aim Owner</td>');
-		expect(m('owned by Mike since 2019')).toBe('owned by Fire Ready Aim Owner since 2019');
+		expect(m('<td>Mike</td>')).toBe('<td>Fire Ready Aim</td>');
+		expect(m('owned by Mike since 2019')).toBe('owned by Fire Ready Aim since 2019');
 	});
 
 	it('catches HTML- and JSON-escaped apostrophes', () => {
@@ -83,11 +83,13 @@ describe('owner name masking', () => {
 
 	it('collapses co-owners who share a stand-in', () => {
 		const m = buildNameMasker([
-			['Ross Lawrence', 'Cowboy Up Owner'],
-			['Shawn Klezovich', 'Cowboy Up Owner'],
+			['Ross Lawrence', 'Cowboy Up'],
+			['Shawn Klezovich', 'Cowboy Up'],
 		]);
-		expect(m('Ross Lawrence & Shawn Klezovich')).toBe('Cowboy Up Owners');
-		expect(m('Ross Lawrence &amp; Shawn Klezovich')).toBe('Cowboy Up Owners');
+		expect(m('Ross Lawrence & Shawn Klezovich')).toBe('Cowboy Up');
+		expect(m('Ross Lawrence &amp; Shawn Klezovich')).toBe('Cowboy Up');
+		expect(m('Ross Lawrence (Cowboy Up)')).toBe('Cowboy Up');
+		expect(m('Cowboy Up and Cowboy Upstarts')).toBe('Cowboy Up and Cowboy Upstarts');
 	});
 
 	it('leaves no real name anywhere in the datasets a guest question reaches', () => {

@@ -36,3 +36,12 @@ context to the first one".
   what-if charts are not flattened.
 - **In place:** the History home's box is the chat for owners who can ask; for
   everyone else it still opens the ask screen (sign-in, the demo's counter).
+
+## 2026-11-26 — a hidden owner is just his team's name
+
+Brandon, on a guest answer reading "Vitside Mafia Owner": "we don't say
+Vitside Mafia owner, that sounds weird". The signed-out stand-in
+(`ownerStandIns`, guest-names.mjs) is now the bare team name, the way the
+league talks. Co-owners ("A & B") and a name shown beside its own team
+("A (Team)") collapse to one team name. Archived What's New text still quotes
+the old form; it is history, not a rule.
