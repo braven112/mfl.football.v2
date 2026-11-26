@@ -203,7 +203,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
 
 <script>
   import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
-  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+  import { shareAnswer } from '../../../utils/league-history/share-answer';
   import { chatTurn } from '../../../utils/league-history/ask-live';
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
@@ -264,7 +264,6 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         url.searchParams.set('after', outcome.data.id);
         history.replaceState(history.state, '', url);
         root.querySelector<HTMLElement>('.hask-top [data-hask-share]')?.removeAttribute('hidden');
-        void prefetchCard({ league: root.dataset.league ?? '', id: outcome.data.id });
       }
       if (outcome.data.followUps?.length) setChips(root, outcome.data.followUps);
       const input = root.querySelector<HTMLInputElement>('.hask-input');
@@ -371,7 +370,6 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
         .then((d: { guest?: GuestAllowance | null }) => showGuest(root, d.guest ?? null))
         .catch(() => {});
     }
-    if (root.dataset.after) void prefetchCard({ league: root.dataset.league ?? '', id: root.dataset.after });
     if (root.dataset.first) void ask(root, root.dataset.first);
     else if (root.dataset.after) root.querySelector('.hask-turn:last-child')?.scrollIntoView({ block: 'start' });
     // Arriving fresh (the History home's ask bar), the visitor came to type:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { askAtLabel, buildAnswerCardTree, cardBars, cardTeams, MAX_CARD_BARS, MAX_TIE_LOGOS, clipWords, headlineSize, teamIcon, ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../src/utils/league-history/answer-card';
-import { shareText } from '../src/utils/league-history/share-answer';
+import { shareAnswer, shareText } from '../src/utils/league-history/share-answer';
 
 describe('Ask the History share card', () => {
   it('is portrait (Brandon, 2026-11-12: landscape cards look bad shared on a phone)', () => {
@@ -37,6 +37,27 @@ describe('Ask the History share card', () => {
   it('ends the share text with the link, so GroupMe cannot autolink punctuation into it', () => {
     const url = 'https://www.theleague.us/history/ask/abcdefghij';
     expect(shareText('Who won?', url).endsWith(url)).toBe(true);
+  });
+
+  it('shares a LINK to the whole conversation, never an attached picture (Brandon, 2026-11-26)', async () => {
+    // Android drops the text when a share carries a file, so GroupMe got the
+    // picture and no link. The picture now rides as the link's unfurl.
+    const calls: ShareData[] = [];
+    const g = globalThis as unknown as { navigator?: unknown; location?: unknown };
+    const before = { navigator: g.navigator, location: g.location };
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { share: async (d: ShareData) => void calls.push(d) } });
+    Object.defineProperty(globalThis, 'location', { configurable: true, value: { origin: 'https://www.theleague.us' } });
+    try {
+      const outcome = await shareAnswer({ league: 'theleague', base: '', id: 'abc', question: 'Who won?' });
+      expect(outcome).toBe('shared');
+      expect(calls).toHaveLength(1);
+      expect(calls[0].files).toBeUndefined();
+      expect(calls[0].url).toBeUndefined();
+      expect(calls[0].text?.endsWith('https://www.theleague.us/history/ask/abc')).toBe(true);
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: before.navigator });
+      Object.defineProperty(globalThis, 'location', { configurable: true, value: before.location });
+    }
   });
 
   describe('tied teams (Brandon, 2026-11-12: show both logos side by side)', () => {
