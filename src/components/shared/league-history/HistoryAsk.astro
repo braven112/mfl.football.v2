@@ -10,9 +10,12 @@
  * For an owner who can ask, the box IS the chat (Brandon, 2026-11-26: typing
  * "just opens up another page … it doesn't feel like someone is really
  * answering me right where I was"): Buck answers right here, live, and the
- * box stays under the latest answer for the next follow-up. Everyone else's
- * box still opens the ask screen, which carries the sign-in and the public
- * demo's question counter.
+ * box stays under the latest answer for the next follow-up. A signed-out
+ * visitor to the public demo league chats in place too (Brandon, same day:
+ * "it links me to another page first … then I have to hit X to go back"),
+ * with names masked by the API; only once their free questions are gone does
+ * a link send them to the ask screen, which carries the email box. Anyone
+ * else (signed in to another league) still opens the ask screen.
  */
 import '../../../styles/history-ask.css';
 import type { LeagueDefinition } from '../../../config/leagues';
@@ -21,6 +24,7 @@ import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
 import { answerTeam } from '../../../utils/league-history/ask-render';
 import { getAuthUser } from '../../../utils/auth';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
+import { canGuestAsk, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
 
 interface Props {
   league: LeagueDefinition;
@@ -34,7 +38,8 @@ const askPage = `${base}/history/ask`;
 // "My team" means nothing to a signed-out visitor (the public demo asks as a guest).
 const authUser = getAuthUser(Astro.request);
 const examples = authUser ? ASK_EXAMPLES : ASK_EXAMPLES.filter((q) => !/\bmy\b/i.test(q));
-const inPlace = canAskLeagueHistory(authUser, league.id);
+const guest = !authUser && canGuestAsk(league.slug);
+const inPlace = canAskLeagueHistory(authUser, league.id) || guest;
 const [hot, ...rest] = asking.topics;
 const most = Math.max(1, ...asking.topics.map((t) => t.owners));
 const owners = (n: number) => `${n} ${n === 1 ? 'owner' : 'owners'}`;
@@ -44,7 +49,7 @@ const teamStyle = (t: AskingTopic) => {
 };
 ---
 
-<section class="ha" aria-labelledby="ha-title" data-ha-chat={inPlace ? '' : undefined} data-league={league.slug} data-base={base}>
+<section class="ha" aria-labelledby="ha-title" data-ha-chat={inPlace ? '' : undefined} data-guest={guest ? 'true' : undefined} data-league={league.slug} data-base={base}>
   <h2 class="visually-hidden" id="ha-title">Ask the History</h2>
   {inPlace ? (
     <>
@@ -56,6 +61,7 @@ const teamStyle = (t: AskingTopic) => {
         <button class="ha-bar__go" type="submit">Ask</button>
       </form>
       <p class="hask-status" data-ha-status role="status" aria-live="polite"></p>
+      {guest && <p class="ha-chat__guest" data-ha-guest>{GUEST_FREE_QUESTIONS} free questions a day · owner names hidden</p>}
       <ul class="ha__examples" data-ha-chips aria-label={`Questions to ask about ${league.name}`}>
         {examples.slice(0, 4).map((q) => (
           <li><button class="ha__example" type="button" data-ha-suggest>{q}</button></li>
@@ -174,8 +180,21 @@ const teamStyle = (t: AskingTopic) => {
         },
         renderAnswer,
       );
+      const allowance = (outcome.data as { guest?: GuestAllowance | null } | null)?.guest;
+      if (allowance) showGuest(root, allowance);
       if (!outcome.ok) {
-        if (status) status.textContent = outcome.error;
+        if (status) {
+          status.textContent = outcome.error;
+          // Out of free questions: the ask screen has the email box for more.
+          const needEmail = (outcome.data as { needEmail?: boolean } | null)?.needEmail === true;
+          if (root.dataset.guest && (needEmail || (allowance && allowance.used >= allowance.limit))) {
+            const more = document.createElement('a');
+            more.className = 'cta-link';
+            more.href = `${root.dataset.base ?? ''}/history/ask`;
+            more.textContent = 'Get more questions';
+            status.append(' ', more);
+          }
+        }
         if (n === 0) thread.hidden = true;
         return false;
       }
@@ -195,6 +214,20 @@ const teamStyle = (t: AskingTopic) => {
     } finally {
       delete root.dataset.busy;
     }
+  }
+
+  interface GuestAllowance {
+    used: number;
+    limit: number;
+    hasEmail: boolean;
+  }
+
+  /** A guest's questions left today, under the box. */
+  function showGuest(root: HTMLElement, a: GuestAllowance) {
+    const line = root.querySelector<HTMLElement>('[data-ha-guest]');
+    if (!root.dataset.guest || !line) return;
+    const left = Math.max(0, a.limit - a.used);
+    line.textContent = `${left > 0 ? `${left} free ${left === 1 ? 'question' : 'questions'} left today` : 'No free questions left today'} · owner names hidden`;
   }
 
   function init() {

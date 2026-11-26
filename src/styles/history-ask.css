@@ -1044,3 +1044,10 @@ button.ha__example {
   margin: 0.75rem 0 0;
   font-size: var(--font-size-sm);
 }
+
+/* A guest's questions left today, under the in-place box. */
+.ha-chat__guest {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}

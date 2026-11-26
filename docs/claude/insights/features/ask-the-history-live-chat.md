@@ -45,3 +45,12 @@ Vitside Mafia owner, that sounds weird". The signed-out stand-in
 league talks. Co-owners ("A & B") and a name shown beside its own team
 ("A (Team)") collapse to one team name. Archived What's New text still quotes
 the old form; it is history, not a rule.
+
+## 2026-11-26 — signed-out visitors chat in place too
+
+Brandon, reviewing the preview signed out: asking from the History home "links
+me to another page first … and then I have to hit X to go back". The in-place
+chat was owners-only; it now also serves a guest of the public demo league
+(`canGuestAsk`). The API already masks names and counts the guest's
+questions; the box shows "N free questions left today", and only a refusal
+for running out links to the ask screen, which holds the email box.
