@@ -8,6 +8,7 @@
  * own competition — the shared page never learns them.
  */
 import { getTeamCompetition } from '../../utils/afl-competition';
+import { getCompetitionMonoMark } from '../../utils/afl-competition-logo';
 import {
   getFranchiseTrophyCase,
   getFranchiseTrophyRoom,
@@ -27,6 +28,9 @@ interface Props {
 }
 const { part, team } = Astro.props;
 const competition = getTeamCompetition(team.franchiseId);
+// The pill sits on the team-color hero, so the competition reads as its own
+// mark in white (Brandon, 2026-11-26), not a colored pill that fights the team color.
+const competitionMark = getCompetitionMonoMark(competition);
 const id: string = team.franchiseId;
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
@@ -127,7 +131,10 @@ function lockedLabel(t: TrophyCaseItem): string {
 }
 ---
 
-{part === 'pill' && (
+{part === 'pill' && competitionMark && (
+<span class="franchise-hero__tier-mark" role="img" aria-label={competition} title={competition} style={`--tier-mark: url('${competitionMark}')`}></span>
+)}
+{part === 'pill' && !competitionMark && (
 <span
   class:list={[
     'ui-badge ui-badge--inline franchise-hero__tier-pill',
@@ -253,6 +260,15 @@ function lockedLabel(t: TrophyCaseItem): string {
     display: flex;
     gap: var(--spacing-sm, 8px);
     margin-bottom: var(--spacing-sm, 8px);
+  }
+
+  .franchise-hero__tier-mark {
+    display: block;
+    width: 44px;
+    height: 55px;
+    background: var(--color-white);
+    -webkit-mask: var(--tier-mark) center / contain no-repeat;
+    mask: var(--tier-mark) center / contain no-repeat;
   }
 
   .franchise-hero__tier-pill {

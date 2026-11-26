@@ -5,6 +5,10 @@
  * history page; asking another question is still for signed-in owners
  * (HistoryAsk.astro). The answer and its table are the ones saved when it was
  * asked (ask-store.ts), so the link reads the same next season.
+ *
+ * A follow-up's link shows the WHOLE conversation, first question down, each
+ * earlier answer with its own chart (Brandon, 2026-11-26: sharing a follow-up
+ * "doesn't give any context to the first one").
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
@@ -12,7 +16,7 @@ import HistoryTabs from './HistoryTabs.astro';
 import HistoryAnswer from './HistoryAnswer.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
-import { countAnswerOpen, type SavedAnswer } from '../../../utils/league-history/ask-store';
+import { conversationTurns, countAnswerOpen, loadConversation, type SavedAnswer } from '../../../utils/league-history/ask-store';
 import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../../../utils/league-history/answer-card';
 
@@ -32,10 +36,14 @@ await countAnswerOpen(saved, franchiseIdForLeague(getAuthUser(Astro.request), le
 // The portrait share card (answer-card.ts) is the link's unfurl, so a pasted
 // link shows the same picture the Share button sends.
 const card = new URL(`/api/og/league-history/answer.png?league=${league.slug}&id=${encodeURIComponent(saved.id)}`, Astro.url).href;
+const chain = await loadConversation(saved).catch(() => []);
+const earlier = conversationTurns(saved, chain);
+const firstQuestion = earlier.length ? ('full' in earlier[0] ? earlier[0].full.question : earlier[0].text.question) : saved.question;
+const kicker = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
 const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 ---
 
-<TheLeagueLayout title={`Ask the history · ${league.name}`} og={{ title: saved.question, description: saved.answer, image: card, imageWidth: ANSWER_CARD_WIDTH, imageHeight: ANSWER_CARD_HEIGHT }}>
+<TheLeagueLayout title={`Ask the history · ${league.name}`} og={{ title: earlier.length ? `${firstQuestion} · ${saved.question}` : saved.question, description: saved.answer, image: card, imageWidth: ANSWER_CARD_WIDTH, imageHeight: ANSWER_CARD_HEIGHT }}>
   <div class="hap">
     <Breadcrumbs
       items={[
@@ -45,7 +53,26 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
       ]}
     />
     <HistoryTabs leagueSlug={league.slug} current="home" />
-    <HistoryAnswer question={saved.question} headline={saved.headline} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
+    {earlier.length === 0 ? (
+      <HistoryAnswer question={saved.question} headline={saved.headline} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
+    ) : (
+      <div class="hap__chat">
+        {earlier.map((t, i) => (
+          <section class="hask-turn">
+            <p class="hask-asked"><span class="hask-asked__kicker">{kicker(i)}</span>{'full' in t ? t.full.question : t.text.question}</p>
+            {'full' in t ? (
+              <HistoryAnswer headline={t.full.headline} answer={t.full.answer} table={t.full.table} asOf={t.full.asOf} records={t.full.records} base={base} />
+            ) : (
+              <p class="hask-earlier">{t.text.answer}</p>
+            )}
+          </section>
+        ))}
+        <section class="hask-turn">
+          <p class="hask-asked"><span class="hask-asked__kicker">{kicker(earlier.length)}</span>{saved.question}</p>
+          <HistoryAnswer headline={saved.headline} answer={saved.answer} table={saved.table} asOf={saved.asOf} records={saved.records} base={base} />
+        </section>
+      </div>
+    )}
     <p class="hap__meta">
       Asked {saved.guest ? 'by a visitor ' : saved.askedBy.name ? `by ${saved.askedBy.name} ` : ''}on {asked}. Counted from the games played up to then.
     </p>
@@ -57,7 +84,7 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
         data-league={league.slug}
         data-base={base}
         data-id={saved.id}
-        data-question={saved.question}
+        data-question={firstQuestion}
       >Share to the group chat</button>
       <a class="cta cta--ghost" href={`${base}/history/ask?after=${saved.id}`}>Ask a follow-up</a>
       <a class="cta cta--ghost" href={`${base}/history/ask`}>Ask your own</a>
@@ -71,6 +98,13 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
     margin: 0 auto;
     padding: 0 1rem 2rem;
     color: var(--page-text);
+  }
+  .hap__chat {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 760px;
+    margin-top: 1rem;
   }
   .hap__meta {
     margin: 0.5rem 0 0;

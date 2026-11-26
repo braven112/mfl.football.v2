@@ -101,6 +101,28 @@ export function diffNewAwards(prevFranchises, nextFranchises) {
   return out;
 }
 
+/**
+ * Career badges that are now announced per OWNER, not per franchise
+ * (Brandon, 2026-11-25): scripts/post-owner-milestones.mjs posts them to the
+ * feed and the chat from owner-tenures.json. A franchise post for the same
+ * mark would count a career the current owner did not have, so the franchise
+ * lane leaves these to it. The badges themselves still render on the
+ * franchise badge wall.
+ */
+export const OWNER_SCOPED_BADGES = new Set([
+  'century-club',
+  'double-century',
+  'triple-century',
+  'playoff-veteran',
+  'playoff-legend',
+  'decade-of-service',
+]);
+
+/** The new awards the FRANCHISE feed lane still posts. */
+export function feedEligibleAwards(newAwards) {
+  return (newAwards || []).filter((a) => !OWNER_SCOPED_BADGES.has(a?.badge?.id));
+}
+
 // ── Phrasing ─────────────────────────────────────────────────────────
 
 // Visual tier: league-wide records jump to 'breaking'; one-time career

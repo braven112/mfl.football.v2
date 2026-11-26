@@ -254,10 +254,12 @@ const priorNames = [
           {!h.active && ` · last played ${h.lastYear}`}
         </p>
         <h1 class="hf-hero__name">{h.name}</h1>
-        {h.owner && !h.owner.key.startsWith('slot:') && (
+        {/* Owners read as their team on history pages (Brandon, 2026-11-26), so
+            the hero links to the person's page rather than printing
+            "Owner: <the team's own name>". */}
+        {h.owner && !h.owner.key.startsWith('slot:') && (ownerHref(h.owner) || isMine) && (
           <p class="hf-hero__owner">
-            {h.active ? 'Owner' : 'Last owner'}:{' '}
-            {ownerHref(h.owner) ? <a href={ownerHref(h.owner)}>{h.owner.name}</a> : h.owner.name}
+            {ownerHref(h.owner) && <a href={ownerHref(h.owner)}>{h.active ? 'Owner page' : 'Last owner’s page'} ›</a>}
             {isMine && <span class="hf-hero__you">Your team</span>}
           </p>
         )}
@@ -558,6 +560,24 @@ const priorNames = [
     border: 1px solid var(--content-border);
     border-top: 3px solid var(--history-gold);
     border-radius: var(--radius-lg, 16px);
+  }
+  /* A league's CTAs on the team colors read white, whatever the site's
+     primary is (Brandon, 2026-11-26: the blue/red buttons "clash against the
+     team"). The main one is solid white in a darkened team color. */
+  .hf-hero :global(.cta--primary) {
+    --cta-bg: var(--color-white);
+    --cta-bg-hover: var(--color-white);
+    --cta-border: var(--color-white);
+    --cta-border-hover: var(--color-white);
+    --cta-ink: color-mix(in srgb, var(--hf-a) 40%, black);
+    --cta-ink-hover: color-mix(in srgb, var(--hf-a) 40%, black);
+  }
+  .hf-hero :global(.cta--ghost) {
+    --cta-ink: var(--color-white);
+    --cta-ink-hover: var(--color-white);
+    --cta-border: color-mix(in srgb, var(--color-white) 60%, transparent);
+    --cta-border-hover: var(--color-white);
+    --cta-bg-hover: color-mix(in srgb, var(--color-white) 14%, transparent);
   }
   .hf-hero__logo {
     flex: none;

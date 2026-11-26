@@ -89,6 +89,11 @@ export const EXEMPT_KINDS = new Set([
   // (no lineup chat posts on Sunday at all). It posts once per league-week,
   // deduped in Redis by the sender.
   'lineup-saturday',
+  // An owner's career milestone (200th win, 10th playoff trip —
+  // scripts/post-owner-milestones.mjs). Brandon's call, Nov 2026: a handful a
+  // league-year, each announced once ever (Redis-deduped, capped per run), and
+  // a milestone held back for "its day" is stale by the time it posts.
+  'career-milestone',
 ]);
 
 /**

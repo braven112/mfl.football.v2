@@ -43,7 +43,7 @@ const fakeRedis = {
 
 vi.mock('../src/utils/redis-client', () => ({ getRedis: async () => fakeRedis }));
 
-const { saveAnswer, readAnswer, countAnswerOpen, recordAsk, leagueIsAsking, turnsAfter, topicOf, askingWeek, MAX_TURNS } = await import(
+const { saveAnswer, readAnswer, countAnswerOpen, recordAsk, leagueIsAsking, turnsAfter, topicOf, askingWeek, MAX_TURNS, loadConversation, conversationTurns } = await import(
 	'../src/utils/league-history/ask-store'
 );
 
@@ -107,8 +107,33 @@ describe('conversations', () => {
 		for (let i = 1; i <= MAX_TURNS + 1; i++) parent = await ask('theleague', `q${i}`, '0001', { parent: parent.id, turns: turnsAfter(parent) });
 		const turns = turnsAfter(parent);
 		expect(turns).toHaveLength(MAX_TURNS);
-		expect(turns.map((t) => t.question)).toEqual(['q2', 'q3', 'q4', 'q5']);
-		expect((await readAnswer('theleague', parent.id))?.turns?.map((t) => t.question)).toEqual(['q1', 'q2', 'q3', 'q4']);
+		const q = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `q${from + i}`);
+		expect(turns.map((t) => t.question)).toEqual(q(2, MAX_TURNS + 1));
+		expect((await readAnswer('theleague', parent.id))?.turns?.map((t) => t.question)).toEqual(q(1, MAX_TURNS));
 		expect(await readAnswer('afl-fantasy', parent.id)).toBeNull();
+	});
+
+	it('remembers a whole chat: 10 exchanges (Brandon, 2026-11-26)', () => {
+		expect(MAX_TURNS).toBe(10);
+	});
+
+	it('reads a follow-up\'s whole conversation back, oldest first, so a shared link shows the first question', async () => {
+		const first = await ask('theleague', 'Who has the most titles?');
+		const second = await ask('theleague', 'What about in the playoffs?', '0001', { parent: first.id, turns: turnsAfter(first) });
+		const third = await ask('theleague', 'And last season?', '0001', { parent: second.id, turns: turnsAfter(second) });
+		const chain = await loadConversation(third);
+		expect(chain.map((a) => a.question)).toEqual(['Who has the most titles?', 'What about in the playoffs?']);
+		const turns = conversationTurns(third, chain);
+		expect(turns.every((t) => 'full' in t)).toBe(true);
+		expect(await loadConversation(first)).toEqual([]);
+	});
+
+	it('falls back to text for turns too old to read back, and never mixes a guest chat with an owner one', async () => {
+		const owner = await ask('theleague', 'Owner question?');
+		const guest = await ask('theleague', 'Guest follow-up?', 'guest:abc', { parent: owner.id, turns: turnsAfter(owner), guest: true });
+		const chain = await loadConversation(guest);
+		expect(chain).toEqual([]);
+		const turns = conversationTurns(guest, chain);
+		expect(turns).toEqual([{ text: { question: 'Owner question?', answer: owner.answer, steps: owner.steps } }]);
 	});
 });
