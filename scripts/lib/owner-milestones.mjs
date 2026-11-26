@@ -132,6 +132,55 @@ const HEADLINE = {
   seasons: (n) => `reaches ${n} seasons in the league`,
 };
 
+/** Display labels for the feed's milestone chip ("Career milestone · 200 Wins"). */
+const CHIP = {
+  'wins-100': { name: '100 Wins', icon: '💯' },
+  'wins-200': { name: '200 Wins', icon: '🔥' },
+  'wins-300': { name: '300 Wins', icon: '👑' },
+  'playoffs-5': { name: '5 Playoff Trips', icon: '🎯' },
+  'playoffs-10': { name: '10 Playoff Trips', icon: '🌠' },
+  'seasons-10': { name: '10 Seasons', icon: '🎖️' },
+};
+
+/**
+ * The franchise badge each owner milestone replaced. The franchise lane used to
+ * post these (id `sf_milestone_<franchiseId>-<badge>`); when that post already
+ * exists for the owner's current franchise, the owner post is not added to the
+ * feed again — Bring The Pain's 200th is in the feed that way.
+ */
+export const LEGACY_FRANCHISE_BADGE = {
+  'wins-100': 'century-club',
+  'wins-200': 'double-century',
+  'wins-300': 'triple-century',
+  'playoffs-5': 'playoff-veteran',
+  'playoffs-10': 'playoff-legend',
+  'seasons-10': 'decade-of-service',
+};
+
+export const legacyFeedPostId = (franchiseId, milestoneId) =>
+  franchiseId && LEGACY_FRANCHISE_BADGE[milestoneId]
+    ? `sf_milestone_${franchiseId}-${LEGACY_FRANCHISE_BADGE[milestoneId]}`
+    : null;
+
+/**
+ * Headline. Leads with the TEAM name — that is how owners refer to each other
+ * (Brandon, 2026-11-25) — while the numbers are the owner's own career.
+ */
+export function milestoneHeadline({ owner, milestone }) {
+  const team = currentTeamName(owner) || owner.displayName;
+  return `${team} ${HEADLINE[milestone.stat](milestone.at)}`;
+}
+
+/** One-line body: whose career it is, the record, and Schefter's flavor line. */
+export function milestoneBody({ owner, milestone }) {
+  const stats = careerStats(owner);
+  const since = owner.yearStart ? `, owner since ${owner.yearStart},` : '';
+  return (
+    `${owner.displayName}${since} is ${record(stats)} all time across ${stats.seasons} seasons, ` +
+    `with ${stats.playoffAppearances} playoff trips. ${FLAVOR[milestone.id] ?? ''}`
+  ).trim();
+}
+
 /**
  * The chat message. Plain text; the URL goes LAST on its own line so nothing
  * trails it (GroupMe autolinks a following period — league-urls.md).
@@ -139,14 +188,40 @@ const HEADLINE = {
  * @param {{ owner: any, milestone: { id: string, stat: string, at: number }, ownerUrl?: string | null }} args
  */
 export function milestoneText({ owner, milestone, ownerUrl = null }) {
-  const stats = careerStats(owner);
-  const team = currentTeamName(owner);
-  const who = team && team !== owner.displayName ? `${owner.displayName} (${team})` : owner.displayName;
-  const since = owner.yearStart ? ` Owner since ${owner.yearStart}.` : '';
-  const lines = [
-    `MILESTONE: ${who} ${HEADLINE[milestone.stat](milestone.at)}.`,
-    `${record(stats)} all time across ${stats.seasons} seasons, ${stats.playoffAppearances} playoff trips.${since} ${FLAVOR[milestone.id] ?? ''}`.trim(),
-  ];
+  const lines = [`MILESTONE: ${milestoneHeadline({ owner, milestone })}.`, milestoneBody({ owner, milestone })];
   if (ownerUrl) lines.push(ownerUrl);
   return lines.join('\n');
+}
+
+/**
+ * The news-feed post. Deterministic id per league + owner + milestone, so a
+ * re-run merges into the same post rather than adding a second.
+ *
+ * @param {{ league: { slug: string, navSlug: string }, owner: any, milestone: any, now: Date }} args
+ */
+export function buildOwnerMilestonePost({ league, owner, milestone, now }) {
+  const chip = CHIP[milestone.id] ?? { name: milestone.id, icon: '🏅' };
+  const stats = careerStats(owner);
+  return {
+    id: `sf_milestone_owner_${league.navSlug}_${owner.ownerId}_${milestone.id}`,
+    timestamp: now.toISOString(),
+    type: 'transaction',
+    transactionSubType: 'milestone',
+    tier: milestone.id === 'wins-300' ? 'breaking' : 'standard',
+    headline: milestoneHeadline({ owner, milestone }),
+    body: milestoneBody({ owner, milestone }),
+    authorId: 'claude',
+    franchiseIds: owner.currentFranchiseId ? [owner.currentFranchiseId] : [],
+    league: league.navSlug,
+    link: owner.slug ? `/${league.slug}/owners/${owner.slug}` : undefined,
+    linkLabel: 'View the owner page →',
+    milestone: {
+      badgeId: milestone.id,
+      badgeName: chip.name,
+      icon: chip.icon,
+      tier: 'career',
+      awardKey: milestone.id,
+      award: { value: stats[milestone.stat] },
+    },
+  };
 }

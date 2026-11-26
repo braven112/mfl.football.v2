@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post owner career milestones to each league's GroupMe, in Schefter's voice.
+ * Post owner career milestones to each league's GroupMe and news feed, in
+ * Schefter's voice. The franchise lane no longer posts these marks
+ * (OWNER_SCOPED_BADGES, scripts/lib/franchise-milestone-posts.mjs).
  *
  * Runs at the end of the Derived History Chain lane, after the freshly
  * computed owner-tenures.json has been committed — so a milestone is only ever
@@ -27,9 +29,12 @@ import { ALL_LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { chatConfigFor } from './lib/chat.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import { mergeFeedIntoRedis, readFeedFromRedis } from './lib/schefter-feed-store.mjs';
 import {
   MAX_NEW_PER_RUN,
   allHeldKeys,
+  buildOwnerMilestonePost,
+  legacyFeedPostId,
   milestoneText,
   newMilestones,
 } from './lib/owner-milestones.mjs';
@@ -50,6 +55,22 @@ export function milestoneLeagues(leagues = ALL_LEAGUES, exists = fs.existsSync) 
 }
 
 export const claimKey = (navSlug, key) => `groupme:${navSlug}:milestone:${key}`;
+
+/**
+ * Add the milestone to the league's live news feed (Redis), unless the feed
+ * already has it — this owner post by id, or the franchise post the old lane
+ * wrote for the same mark on the owner's current team.
+ */
+async function writeFeedPost(redis, league, post, legacyId, tag) {
+  const feed = await readFeedFromRedis(redis, league.slug);
+  const ids = new Set((feed?.posts ?? []).map((p) => p?.id));
+  if (ids.has(post.id) || (legacyId && ids.has(legacyId))) {
+    console.log(`${tag} Feed already has ${post.id}${legacyId && ids.has(legacyId) ? ` (as ${legacyId})` : ''}.`);
+    return;
+  }
+  const { written } = await mergeFeedIntoRedis(redis, league.slug, { posts: [post] });
+  console.log(`${tag} ${written ? 'Added' : 'Did not add'} feed post ${post.id}.`);
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -106,8 +127,10 @@ async function main() {
         milestone,
         ownerUrl: owner.slug ? leagueUrl(league, `/owners/${owner.slug}`) : null,
       });
+      const post = buildOwnerMilestonePost({ league, owner, milestone, now: new Date() });
+      const legacyId = legacyFeedPostId(owner.currentFranchiseId, milestone.id);
       if (dryRun) {
-        console.log(`${tag} [dry-run] ${key}\n${text}\n`);
+        console.log(`${tag} [dry-run] ${key}\n--- chat ---\n${text}\n--- feed ---\n${post.headline}\n${post.body}\n(skipped in the feed if ${legacyId ?? 'n/a'} exists)\n`);
         continue;
       }
       const ck = claimKey(league.navSlug, key);
@@ -116,6 +139,11 @@ async function main() {
         console.log(`${tag} ${key} already announced.`);
         continue;
       }
+      // Feed first: it is idempotent by id, so a chat failure that releases the
+      // claim below re-runs it harmlessly tomorrow.
+      await writeFeedPost(redis, league, post, legacyId, tag).catch((err) =>
+        console.warn(`${tag} Feed write failed for ${key}: ${err?.message ?? err}`),
+      );
       const result = await postToGroupMeCapped(/** @type {any} */ ({
         kind: MILESTONE_KIND,
         league: { navSlug: league.navSlug },

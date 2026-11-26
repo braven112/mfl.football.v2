@@ -9,7 +9,10 @@ import {
   newMilestones,
   milestoneText,
   allHeldKeys,
+  buildOwnerMilestonePost,
+  legacyFeedPostId,
 } from '../scripts/lib/owner-milestones.mjs';
+import { feedEligibleAwards, OWNER_SCOPED_BADGES } from '../scripts/lib/franchise-milestone-posts.mjs';
 import { milestoneLeagues, MILESTONE_KIND, claimKey } from '../scripts/post-owner-milestones.mjs';
 import { isExempt } from '../scripts/lib/groupme-day-plan.mjs';
 
@@ -72,16 +75,61 @@ describe('what is new', () => {
 });
 
 describe('the chat text', () => {
-  it('names owner and team, gives the record, and ends on the link', () => {
+  const wins200 = OWNER_MILESTONES.find((m) => m.id === 'wins-200')!;
+
+  it('leads with the TEAM name, gives the owner record, and ends on the link', () => {
     const text = milestoneText({
       owner: owner(),
-      milestone: OWNER_MILESTONES.find((m) => m.id === 'wins-200')!,
+      milestone: wins200,
       ownerUrl: 'https://www.theleague.us/owners/bring-the-pain-2007',
     });
-    expect(text).toContain('Todd Gibel (Bring The Pain) hits 200 career wins.');
-    expect(text).toContain('200-148 all time');
+    expect(text.split('\n')[0]).toBe('MILESTONE: Bring The Pain hits 200 career wins.');
+    expect(text).toContain('Todd Gibel, owner since 2007, is 200-148 all time');
     expect(text).not.toContain('!');
     expect(text.split('\n').at(-1)).toBe('https://www.theleague.us/owners/bring-the-pain-2007');
+  });
+});
+
+describe('the feed post', () => {
+  const wins200 = OWNER_MILESTONES.find((m) => m.id === 'wins-200')!;
+  const now = new Date('2026-11-26T20:30:00Z');
+
+  it('has a stable id per league + owner + milestone, and links the owner page', () => {
+    const league = { slug: 'theleague', navSlug: 'theleague' };
+    const a = buildOwnerMilestonePost({ league, owner: owner(), milestone: wins200, now });
+    const b = buildOwnerMilestonePost({ league, owner: owner(), milestone: wins200, now: new Date() });
+    expect(a.id).toBe(b.id);
+    expect(a.id).toBe('sf_milestone_owner_theleague_own-0001_wins-200');
+    expect(a.headline).toBe('Bring The Pain hits 200 career wins');
+    expect(a.link).toBe('/theleague/owners/bring-the-pain-2007');
+    expect(a.transactionSubType).toBe('milestone');
+    expect(a.milestone.tier).toBe('career');
+  });
+
+  it('keys the AFL post by its own league, since both leagues have an own-0001', () => {
+    const afl = buildOwnerMilestonePost({ league: { slug: 'afl-fantasy', navSlug: 'afl' }, owner: owner(), milestone: wins200, now });
+    expect(afl.id).not.toBe('sf_milestone_owner_theleague_own-0001_wins-200');
+    expect(afl.link).toBe('/afl-fantasy/owners/bring-the-pain-2007');
+  });
+
+  it('recognizes the franchise post the old lane already wrote for the same mark', () => {
+    expect(legacyFeedPostId('0008', 'wins-200')).toBe('sf_milestone_0008-double-century');
+  });
+});
+
+describe('the franchise lane hands career marks to the owner lane', () => {
+  const award = (id: string) => ({ franchiseId: '0001', badge: { id }, award: {} });
+
+  it('no longer posts career wins, playoff trips or seasons per franchise', () => {
+    const kept = feedEligibleAwards([award('double-century'), award('playoff-legend'), award('top-scorer')]);
+    expect(kept.map((a: any) => a.badge.id)).toEqual(['top-scorer']);
+  });
+
+  it('covers every owner milestone with its old franchise badge', () => {
+    for (const m of OWNER_MILESTONES) {
+      const legacy = legacyFeedPostId('0001', m.id)!.replace('sf_milestone_0001-', '');
+      expect(OWNER_SCOPED_BADGES.has(legacy), m.id).toBe(true);
+    }
   });
 });
 
