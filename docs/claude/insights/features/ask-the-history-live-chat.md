@@ -54,3 +54,13 @@ chat was owners-only; it now also serves a guest of the public demo league
 (`canGuestAsk`). The API already masks names and counts the guest's
 questions; the box shows "N free questions left today", and only a refusal
 for running out links to the ask screen, which holds the email box.
+
+## 2026-11-26 — Buck calls everyone by team, signed in or not
+
+Brandon: "I want to use franchise names even when signed in. It feels more
+natural than referring to an owner's name." The system prompt now tells Buck
+to name every owner by their team (that season's name, or for a career the
+team they are best known for), never a personal name, even when the asker
+used one. Owner names stay in the data so "how has Todd done" still finds
+him. Pinned in `tests/league-history-ask.test.ts`. History pages keep owner
+names unless Brandon widens it.

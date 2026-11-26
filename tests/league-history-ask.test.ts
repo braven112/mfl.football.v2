@@ -403,6 +403,9 @@ describe('askHistory', () => {
     expect(system).toContain('Trash talk comes back on the asker');
     expect(system).toContain('sorted by winPct then pf');
     expect(system).toMatch(/never make sexuality, race, religion/);
+    // Everyone by team name, signed in or not (Brandon, 2026-11-26: "it feels more natural").
+    expect(system).toContain('Call everyone by their TEAM name');
+    expect(system).toContain("Never put an owner's personal name in the answer");
   });
 
   /**
