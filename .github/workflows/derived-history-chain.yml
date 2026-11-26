@@ -92,3 +92,19 @@ jobs:
             --branch "$TARGET_BRANCH" \
             --message "chore: recompute franchise-history derived chain" \
             --files "$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"
+
+      # Owner career milestones to each league's GroupMe (Schefter's bot). After
+      # the commit on purpose: a milestone is only announced from numbers that
+      # are in git. Exempt from the one-post-a-day cap; deduped in Redis.
+      # Manual dispatches from a branch would post for real, so only the
+      # default branch posts.
+      - name: Post owner career milestones to GroupMe
+        if: github.ref_name == github.event.repository.default_branch
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+        run: node ./scripts/post-owner-milestones.mjs
