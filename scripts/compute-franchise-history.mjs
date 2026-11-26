@@ -42,6 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { buildBadgeContext, computeBadgesFor } from './badges.mjs';
 import {
   diffNewAwards,
+  feedEligibleAwards,
   buildMilestonePost,
   mergeMilestonePosts,
   resolveMilestoneEmission,
@@ -1566,7 +1567,9 @@ if (!milestoneEmission.emit) {
 } else if (!previousOutput?.franchises) {
   console.log('[franchise-history] no previous snapshot — milestone diff skipped (silent seed)');
 } else {
-  const newAwards = diffNewAwards(previousOutput.franchises, franchises);
+  // Career-win, playoff-trip and seasons marks are owner-scoped now and post
+  // from scripts/post-owner-milestones.mjs — see OWNER_SCOPED_BADGES.
+  const newAwards = feedEligibleAwards(diffNewAwards(previousOutput.franchises, franchises));
   if (newAwards.length === 0) {
     console.log('[franchise-history] no new badges — milestone diff empty');
   } else {
