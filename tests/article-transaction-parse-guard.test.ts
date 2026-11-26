@@ -44,7 +44,7 @@ describe('waiver article transaction parsing', () => {
 
   const sheetFor = async (transactions: Array<Record<string, string>>, league = 'theleague') => {
     const now = Math.floor(Date.now() / 1000);
-    const { factSheet, enrichment } = await buildFactSheet(
+    const result = await buildFactSheet(
       {
         players,
         transactions: {
@@ -64,6 +64,9 @@ describe('waiver article transaction parsing', () => {
       ROOT,
       { league },
     );
+    // Every fixture week has a waiver run, so the column never declines here.
+    if (!result) throw new Error('waiver column declined a week that has a waiver run');
+    const { factSheet, enrichment } = result;
     return { factSheet, enrichment };
   };
 
