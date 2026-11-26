@@ -99,6 +99,7 @@ describe('owner name masking', () => {
 		expect(m('Ross Lawrence & Shawn Klezovich')).toBe('Cowboy Up');
 		expect(m('Ross Lawrence &amp; Shawn Klezovich')).toBe('Cowboy Up');
 		expect(m('Ross Lawrence (Cowboy Up)')).toBe('Cowboy Up');
+		expect(m("Ross Lawrence's team won")).toBe('Cowboy Up won');
 		expect(m('Cowboy Up and Cowboy Upstarts')).toBe('Cowboy Up and Cowboy Upstarts');
 	});
 

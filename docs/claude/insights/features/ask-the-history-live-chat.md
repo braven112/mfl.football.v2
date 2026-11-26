@@ -76,3 +76,15 @@ them masked on TheLeague). Team-names mode fails OPEN and leaves the cache
 headers alone, since it is the same page for every viewer; guest mode still
 fails closed and is `private, no-store`. The franchise hero no longer prints
 "Owner: <name>" (it would read "Owner: Smokane FC"): it links "Owner page ›".
+
+## 2026-11-26 — in-place answers: chart styles, and names swapped on the way out
+
+Brandon's first in-place answer on the History home drew every chart as a
+black box: `HistoryAsk.astro` never imported `record-charts.css` (the ask
+screen and HistoryAnswer do), and the home only needed it once Buck answered
+there. And a prompt rule alone let "Jomar Marinio's team" through for a
+signed-in owner, because a live answer is JSON the page renders client-side,
+which the middleware's HTML pass never sees. The owner path now runs the
+team-name masker over every streamed event and the final answer (the data
+keeps real names so a question about a person still finds them), and the
+masker folds "<Team>'s team" into the team.

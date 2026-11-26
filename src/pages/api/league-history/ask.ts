@@ -49,7 +49,7 @@ import {
 	spendGuestQuestion,
 	type GuestAllowance,
 } from '../../../utils/league-history/guest-ask';
-import { guestMasker, maskAskData, maskValue } from '../../../utils/league-history/guest-mask';
+import { guestMasker, maskAskData, maskValue, teamNameMasker } from '../../../utils/league-history/guest-mask';
 import { recordFunnel } from '../../../utils/history-funnel';
 import { aiModelForLeague } from '../../../utils/ai-plan.mjs';
 import { recordAiUsage } from '../../../utils/ai-usage';
@@ -246,12 +246,20 @@ export const POST: APIRoute = async ({ request }) => {
 			// Owners credited through approved owner links (utils/owner-link-live.ts).
 			const history = await loadLiveLeagueHistory(league.slug, loaded.history);
 			const ds: AskData = { ...loaded, history, competitions, salaries };
-			result = await askHistory(league.slug, ds, question, {
-				turns,
-				asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
-				onUsage: (u) => void recordAiUsage(league.slug, u).catch(() => {}),
-				onEvent,
-			});
+			// Owners read as their team in every answer (Brandon, 2026-11-26), and
+			// the prompt alone let a real name through. The data keeps real names
+			// so "how has Todd done" still finds him; what goes OUT is swapped,
+			// every live event too. A missing owner list leaves the answer as is.
+			const mask = await teamNameMasker(league.slug)?.catch(() => null);
+			const out = <T,>(v: T): T => (mask ? maskValue(v, mask) : v);
+			result = out(
+				await askHistory(league.slug, ds, question, {
+					turns,
+					asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
+					onUsage: (u) => void recordAiUsage(league.slug, u).catch(() => {}),
+					onEvent: onEvent && ((event) => onEvent(out(event))),
+				}),
+			);
 		} catch (e) {
 			console.error('[league-history/ask] failed:', e);
 			return { status: 503, body: { error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' } };

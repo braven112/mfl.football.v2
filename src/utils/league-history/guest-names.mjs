@@ -106,11 +106,13 @@ export function buildNameMasker(pairs) {
   const teams = alt([...new Set(byName.values())].sort((a, b) => b.length - a.length));
   const pairRe = new RegExp(`(?<![\\p{L}\\p{N}])(${teams}) (?:&amp;|&|and|\\+) \\1(?![\\p{L}\\p{N}])`, 'gu');
   const echoRe = new RegExp(`(?<![\\p{L}\\p{N}])(${teams}) \\(\\1\\)`, 'gu');
+  // "Nate Rich's team" became "Gridiron Geeks's team": the team is just the team.
+  const ownedRe = new RegExp(`(?<![\\p{L}\\p{N}])(${teams})(?:'|’|&#39;)s (?:team|franchise|club)(?![\\p{L}\\p{N}])`, 'gu');
   return (text) => {
     if (typeof text !== 'string' || !text) return text;
     let out = text;
     for (const re of res) out = out.replace(re, (m) => byName.get(m) ?? m);
-    return out.replace(pairRe, '$1').replace(echoRe, '$1');
+    return out.replace(pairRe, '$1').replace(echoRe, '$1').replace(ownedRe, '$1');
   };
 }
 
