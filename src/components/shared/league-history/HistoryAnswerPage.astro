@@ -120,7 +120,7 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
 </style>
 
 <script>
-  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+  import { shareAnswer } from '../../../utils/league-history/share-answer';
 
   document.addEventListener('astro:page-load', () => {
     const button = document.querySelector<HTMLButtonElement>('[data-hap-share]');
@@ -132,7 +132,6 @@ const asked = new Date(saved.createdAt).toLocaleDateString('en-US', { month: 'sh
       id: button.dataset.id ?? '',
       question: button.dataset.question ?? '',
     };
-    void prefetchCard(answer);
     button.addEventListener('click', async () => {
       const outcome = await shareAnswer(answer);
       if (outcome === 'copied') button.textContent = 'Link copied';
