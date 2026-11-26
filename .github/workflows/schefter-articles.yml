@@ -30,6 +30,11 @@ on:
         description: "Override week number (optional)"
         required: false
         type: string
+      replace:
+        description: "Re-write that week's already-published column in place (needs week)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: schefter-articles
@@ -136,6 +141,7 @@ jobs:
           # because the `runner` context does not exist at job level.
           SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
           WEEK_OVERRIDE: ${{ github.event.inputs.week }}
+          REPLACE: ${{ github.event.inputs.replace }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
           # cut-watch reads autocut:{fid} cutdown-plan status (counts only)
@@ -156,6 +162,12 @@ jobs:
           WEEK_ARG=""
           if [ -n "$WEEK_OVERRIDE" ]; then
             WEEK_ARG="--week $WEEK_OVERRIDE"
+          fi
+          # A re-run that replaces a wrong column; only the generic weekly
+          # columns take it (scripts/schefter-weekly-articles.mjs --replace).
+          REPLACE_ARG=""
+          if [ "$REPLACE" = "true" ] && [ -n "$WEEK_OVERRIDE" ]; then
+            REPLACE_ARG="--replace"
           fi
           echo "Generating: $ARTICLE_TYPE"
           # Runs `$@ --league <slug>` for every league a job lists
@@ -247,7 +259,7 @@ jobs:
             node scripts/compute-playoff-odds.mjs || echo "::warning::playoff odds compute failed (non-fatal)"
             each_league article:matchup-preview node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           else
-            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG $REPLACE_ARG
           fi
 
       # Stamp playerIds onto the new article (prose names → MFL ids) so My

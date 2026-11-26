@@ -154,3 +154,28 @@ describe('the article runner reads transactions live', () => {
     expect(src).toMatch(/data\.transactions = await fetchLiveTransactions\(league, year\)/);
   });
 });
+
+describe('replaceInFeed: re-writing a column that published wrong', () => {
+  it('swaps the post in place and bumps storyVersion so a stale merge cannot undo it', async () => {
+    const { replaceInFeed } = await import('../scripts/article-utils/feed-writer.mjs');
+    const os = await import('node:os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'feed-'));
+    const feedPath = path.join(dir, 'feed.json');
+    fs.writeFileSync(feedPath, JSON.stringify({ posts: [
+      { id: 'a', headline: 'newer' },
+      { id: 'sf_2026_waiver_pickups_w11', headline: 'Zero claims' },
+    ] }));
+    await replaceInFeed(feedPath, { id: 'sf_2026_waiver_pickups_w11', headline: 'Pigskins win Justice Hill' });
+    const feed = JSON.parse(fs.readFileSync(feedPath, 'utf8'));
+    expect(feed.posts).toHaveLength(2);
+    expect(feed.posts[1]).toMatchObject({ headline: 'Pigskins win Justice Hill', storyVersion: 1 });
+  });
+
+  it('refuses a post that is not in the live feed rather than publishing a copy', async () => {
+    const { replaceInFeed } = await import('../scripts/article-utils/feed-writer.mjs');
+    const os = await import('node:os');
+    const feedPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'feed-')), 'feed.json');
+    fs.writeFileSync(feedPath, JSON.stringify({ posts: [] }));
+    await expect(replaceInFeed(feedPath, { id: 'missing' })).rejects.toThrow(/not in the live feed/);
+  });
+});

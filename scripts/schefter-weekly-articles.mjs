@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
-import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
+import { isDuplicate, appendToFeed, replaceInFeed } from './article-utils/feed-writer.mjs';
 import {
   findForeignLeagueNamesInPost,
   scrubPostLeagueNames,
@@ -98,7 +98,7 @@ const GROUPME_BOT_ENV = {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { type: null, week: null, year: null, dryRun: false, league: 'theleague' };
+  const opts = { type: null, week: null, year: null, dryRun: false, replace: false, league: 'theleague' };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -107,6 +107,10 @@ function parseArgs() {
       case '--year': opts.year = parseInt(args[++i], 10); break;
       case '--league': opts.league = args[++i]; break;
       case '--dry-run': opts.dryRun = true; break;
+      // Re-write a column that already published WRONG, same id, in place.
+      // Only with an explicit --week: a re-run is a deliberate act on one
+      // named week, never something a scheduled tick can do.
+      case '--replace': opts.replace = true; break;
     }
   }
 
@@ -239,7 +243,13 @@ async function main() {
 
   // Step 5: Dedup check
   const feedPath = getFeedPath(projectRoot, league);
-  if (await isDuplicate(feedPath, articleId)) {
+  if (opts.replace && opts.week == null) {
+    console.error('--replace needs an explicit --week.');
+    process.exit(1);
+  }
+  if (opts.replace) {
+    console.log(`  [replace] Re-writing ${articleId} in place.`);
+  } else if (await isDuplicate(feedPath, articleId)) {
     console.log(`  [skip] Article ${articleId} already exists in feed. Exiting.`);
     return;
   }
@@ -386,7 +396,7 @@ async function main() {
   const scrubbed = scrubPostLeagueNames(post, league);
   if (scrubbed.length) console.warn(`  [league-name] Rewrote another league's name in: ${scrubbed.join(', ')}`);
 
-  const written = await appendToFeed(feedPath, post);
+  const written = opts.replace ? await replaceInFeed(feedPath, post) : await appendToFeed(feedPath, post);
   if (written) {
     console.log(`\n✅ Article "${post.headline}" appended to feed.`);
   }
