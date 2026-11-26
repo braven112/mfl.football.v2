@@ -584,6 +584,17 @@
           "path": "/top-players",
           "external": false,
           "description": "Weekly scores, totals and position ranks for every player"
+        },
+        {
+          "id": "matchup-planner",
+          "label": "Matchup Planner",
+          "icon": "binoculars",
+          "path": "/admin/matchup-planner",
+          "external": false,
+          "visibility": "admin",
+          "siteOwnerOnly": true,
+          "newSince": "2026-11-25",
+          "description": "Private to you: what each NFL defense gives up by position, and your players' upcoming matchups"
         }
       ]
     },

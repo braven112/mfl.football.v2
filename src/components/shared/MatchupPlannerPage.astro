@@ -1,0 +1,826 @@
+---
+/**
+ * Brandon's private Matchup Planner — /theleague/admin/matchup-planner and
+ * /afl-fantasy/admin/matchup-planner.
+ *
+ * The route wrappers own the gate (the site owner's own franchise session,
+ * `isSiteOwnerIn`) and the layout. This component shows, in the chosen
+ * league's own scoring:
+ *
+ *   - Schedule grid: his roster and the best free agents, with each week's
+ *     opponent and what that defense allows to the player's position, for any
+ *     stretch of weeks (Weeks 15–17, his playoffs, by default).
+ *   - Points allowed: all 32 defenses by position, season or last 4 games.
+ *
+ * Position and week changes on the grid switch instantly in the browser:
+ * every week and every position's rows are rendered, and the script below
+ * shows the chosen ones and re-sorts by the stretch average. The pills are
+ * still real links (and the week picker a GET form), so a reload or a
+ * no-script load lands on the same view. Season/Last 4, the league and the
+ * view tabs load a new page, since every number changes.
+ * Maths: utils/matchup-planner.ts; data: utils/matchup-planner-data.ts.
+ */
+import PlayerCell from './PlayerCell.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { normalizeTeamCode, getNFLTeamLogo } from '../../utils/nfl';
+import { SITE_OWNER_FRANCHISES } from '../../utils/site-owner';
+import { loadPlannerData } from '../../utils/matchup-planner-data';
+import {
+  PLANNER_POSITIONS, POSITION_LABELS, RECENT_GAMES, MAX_RANGE, PLAYOFF_WEEKS,
+  currentWeek, lastRegularWeek, leagueAverage, matchupCells, parsePlannerQuery, plannerHref,
+  pointsPerGame, stretchScore, summarizeAllowed,
+  type MatchupCell, type PlannerPosition,
+} from '../../utils/matchup-planner';
+import { fpaTier } from '../../utils/nfl-matchups';
+import { injuryBadgeLabel, injuryBadgeTitle, type InjuryMap } from '../../utils/mfl-injuries';
+import { loadLiveInjuryMap } from '../../utils/mfl-injuries-live-map';
+import '../../styles/injury-indicator.css';
+
+interface Props {
+  /** The registry slug of the route this renders under. */
+  routeSlug: string;
+}
+const { routeSlug } = Astro.props;
+
+/** How many free agents the grid lists. */
+const FREE_AGENT_COUNT = 25;
+
+const leagueSlugs = Object.keys(SITE_OWNER_FRANCHISES);
+const requested = Astro.url.searchParams.get('league');
+const slug = requested && leagueSlugs.includes(requested) ? requested : routeSlug;
+// Only carry ?league= when it differs from the route's own league.
+const leagueParam = slug === routeSlug ? null : slug;
+const path = Astro.url.pathname;
+
+const [data, injuries] = await Promise.all([
+  loadPlannerData(slug),
+  loadLiveInjuryMap(slug).catch((): InjuryMap => ({})),
+]);
+const maxWeek = data ? lastRegularWeek(data.schedule) : 18;
+const q = parsePlannerQuery(Astro.url.searchParams, maxWeek);
+const href = (patch: Parameters<typeof plannerHref>[3]) => plannerHref(path, leagueParam, q, patch);
+
+const summary = data ? summarizeAllowed(data.teams, data.schedule, data.weekly, data.official, q.window) : null;
+const nowWeek = data ? currentWeek(data.schedule) : null;
+const weeks = Array.from({ length: q.to - q.from + 1 }, (_, i) => q.from + i);
+const allWeeks = Array.from({ length: maxWeek }, (_, i) => i + 1);
+
+interface GridRow {
+  id: string;
+  name: string;
+  position: PlannerPosition;
+  team: string;
+  espnId?: string;
+  ppg: number | null;
+  status?: string;
+  /** One cell per week of the season; the chosen range is shown, the rest hidden. */
+  cells: MatchupCell[];
+  /** Stretch average over the chosen weeks (the script recomputes it on a change). */
+  score: number | null;
+  /** Free agents only: among the top {@link FREE_AGENT_COUNT} at every position combined. */
+  topOverall?: boolean;
+}
+
+const inRange = (w: number) => w >= q.from && w <= q.to;
+
+function gridRow(id: string, status?: string): GridRow | null {
+  const p = data!.players.get(id);
+  if (!p || !p.team || p.team === 'FA') return null;
+  const position = p.position as PlannerPosition;
+  if (!PLANNER_POSITIONS.includes(position)) return null;
+  const cells = matchupCells(p, allWeeks, data!.schedule, summary!);
+  return {
+    id,
+    name: p.name,
+    position,
+    team: p.team,
+    espnId: p.espnId,
+    ppg: pointsPerGame(id, p.team, data!.scoresByWeek, data!.schedule).ppg,
+    status,
+    cells,
+    score: stretchScore(cells.filter((c) => inRange(c.week))),
+  };
+}
+
+// One DOM order serves every filter: by position, then the stretch average.
+// "All" shows every group; a position shows its own group, already in order.
+const posOrder = (pos: string) => PLANNER_POSITIONS.indexOf(pos as PlannerPosition);
+const byScore = (a: GridRow, b: GridRow) => (b.score ?? -1) - (a.score ?? -1) || (b.ppg ?? 0) - (a.ppg ?? 0);
+const grouped = (rows: GridRow[]) => rows.sort((a, b) => posOrder(a.position) - posOrder(b.position) || byScore(a, b));
+const showRow = (row: GridRow, mine: boolean) =>
+  q.pos === 'all' ? mine || !!row.topOverall : row.position === q.pos;
+
+const myRows = data && summary
+  ? grouped([...data!.mine].map(([id, status]) => gridRow(id, status)).filter((r): r is GridRow => !!r))
+  : [];
+
+// The top free agents overall (shown under All) and the top at each position
+// (shown under that position). Anyone in the overall top 25 is also in his
+// own position's top 25, so the union is one row per player.
+const faRows: GridRow[] = (() => {
+  if (!data || !summary) return [];
+  const pool = [...data.players.keys()]
+    .filter((id) => !data.rostered.has(id))
+    .map((id) => gridRow(id))
+    .filter((r): r is GridRow => !!r && r.ppg != null)
+    .sort((a, b) => (b.ppg ?? 0) - (a.ppg ?? 0));
+  const keep = new Set<GridRow>();
+  pool.slice(0, FREE_AGENT_COUNT).forEach((r) => {
+    r.topOverall = true;
+    keep.add(r);
+  });
+  for (const pos of PLANNER_POSITIONS) pool.filter((r) => r.position === pos).slice(0, FREE_AGENT_COUNT).forEach((r) => keep.add(r));
+  return grouped([...keep]);
+})();
+
+// Points-allowed table, softest defense at the sorted position first.
+const tableRows = summary
+  ? Object.entries(summary).sort(([a, ra], [b, rb]) => (rb[q.sort].avg ?? -1) - (ra[q.sort].avg ?? -1) || a.localeCompare(b))
+  : [];
+const teamCount = tableRows.length;
+const averages: Partial<Record<PlannerPosition, number | null>> = summary
+  ? Object.fromEntries(PLANNER_POSITIONS.map((p) => [p, leagueAverage(summary, p)]))
+  : {};
+
+const tierOf = (rank: number | null) => (rank == null ? null : fpaTier(teamCount && teamCount !== 32 ? Math.round((rank / teamCount) * 32) : rank));
+const fmt = (v: number | null | undefined) => (typeof v === 'number' ? v.toFixed(1) : '—');
+const code = (team: string) => normalizeTeamCode(team);
+
+const leagueName = getLeagueBySlug(slug)?.name ?? slug;
+const windowText = q.window === 'recent' ? `last ${RECENT_GAMES} games` : 'this season';
+const presets = [
+  { label: `Playoffs (Wk ${PLAYOFF_WEEKS.from}–${PLAYOFF_WEEKS.to})`, from: PLAYOFF_WEEKS.from, to: PLAYOFF_WEEKS.to },
+  ...(nowWeek && nowWeek <= maxWeek
+    ? [{ label: 'Next 3 weeks', from: nowWeek, to: Math.min(nowWeek + 2, maxWeek) }]
+    : []),
+  ...(nowWeek && nowWeek <= maxWeek ? [{ label: 'This week', from: nowWeek, to: nowWeek }] : []),
+];
+const officialUsed = !!data?.official && q.window === 'season';
+---
+
+<section
+  class="mp"
+  data-league={routeSlug}
+  data-mp-max-range={MAX_RANGE}
+  data-mp-default-from={PLAYOFF_WEEKS.from}
+  data-mp-default-to={PLAYOFF_WEEKS.to}
+>
+  <header class="mp-head">
+    <div>
+      <h1 class="mp-title">Matchup Planner</h1>
+      <p class="mp-sub">Only you can see this page. What each NFL defense gives up per game, in {leagueName} scoring.</p>
+    </div>
+    <div class="ui-pills" role="group" aria-label="League">
+      {leagueSlugs.map((s) => (
+        <a class="ui-pill" href={plannerHref(path, s === routeSlug ? null : s, q, {})} aria-current={s === slug ? 'true' : undefined}>
+          {getLeagueBySlug(s)?.name ?? s}
+        </a>
+      ))}
+    </div>
+  </header>
+
+  <nav class="ui-tabs mp-tabs" aria-label="Planner view">
+    <a class="ui-tab mp-tab" href={href({ view: 'grid' })} aria-current={q.view === 'grid' ? 'page' : undefined}>Schedule grid</a>
+    <a class="ui-tab mp-tab" href={href({ view: 'table' })} aria-current={q.view === 'table' ? 'page' : undefined}>Points allowed</a>
+  </nav>
+
+  {!data || !summary ? (
+    <div class="mp-empty" role="status"><p><strong>The NFL schedule for this league could not load.</strong> Try again in a minute.</p></div>
+  ) : (
+    <>
+      <div class="mp-filters">
+        <div class="ui-pills" role="group" aria-label="Averages over">
+          <a class="ui-pill" href={href({ window: 'season' })} aria-current={q.window === 'season' ? 'true' : undefined}>Season</a>
+          <a class="ui-pill" href={href({ window: 'recent' })} aria-current={q.window === 'recent' ? 'true' : undefined}>Last {RECENT_GAMES} games</a>
+        </div>
+
+        {q.view === 'grid' && (
+          <>
+            <div class="ui-pills" role="group" aria-label="Weeks">
+              {presets.map((p) => (
+                <a class="ui-pill" href={href({ from: p.from, to: p.to })} data-mp-from={p.from} data-mp-to={p.to} aria-current={p.from === q.from && p.to === q.to ? 'true' : undefined}>{p.label}</a>
+              ))}
+            </div>
+            <form class="mp-range" method="get" action={path} data-mp-range>
+              {leagueParam && <input type="hidden" name="league" value={leagueParam} />}
+              {q.window !== 'season' && <input type="hidden" name="window" value={q.window} />}
+              <input type="hidden" name="pos" value={q.pos} disabled={q.pos === 'all'} data-mp-pos-input />
+              <label>Week
+                <select name="from">
+                  {allWeeks.map((w) => <option value={w} selected={w === q.from}>{w}</option>)}
+                </select>
+              </label>
+              <label>to
+                <select name="to">
+                  {allWeeks.map((w) => <option value={w} selected={w === q.to}>{w}</option>)}
+                </select>
+              </label>
+              <button type="submit" class="cta cta--ghost mp-go">Show</button>
+            </form>
+            <div class="ui-pills" role="group" aria-label="Position">
+              <a class="ui-pill" href={href({ pos: 'all' })} data-mp-pos="all" aria-current={q.pos === 'all' ? 'true' : undefined}>All</a>
+              {PLANNER_POSITIONS.map((p) => (
+                <a class="ui-pill" href={href({ pos: p })} data-mp-pos={p} aria-current={q.pos === p ? 'true' : undefined}>{POSITION_LABELS[p]}</a>
+              ))}
+            </div>
+          </>
+        )}
+
+        {q.view === 'table' && (
+          <div class="ui-pills" role="group" aria-label="Sort by position">
+            {PLANNER_POSITIONS.map((p) => (
+              <a class="ui-pill" href={href({ sort: p })} aria-current={q.sort === p ? 'true' : undefined}>{POSITION_LABELS[p]}</a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p class="mp-legend">
+        <span class="mp-chip mp-tier-4">Soft</span>
+        <span class="mp-chip mp-tier-3">Good</span>
+        <span class="mp-chip mp-tier-2">Fair</span>
+        <span class="mp-chip mp-tier-1">Tough</span>
+        <span class="mp-legend-text">Rank 32 gives up the most points ({windowText}).</span>
+      </p>
+
+      {q.view === 'grid' ? (
+        <>
+          {[
+            { title: 'My team', rows: myRows, empty: 'No players on your roster match this filter.', mine: true },
+            { title: 'Top free agents', rows: faRows, empty: 'No free agents match this filter.', mine: false },
+          ].map((section) => (
+            <section class="mp-section">
+              <h2 class="mp-h2">
+                {section.title}
+                {!section.mine && <span class="mp-h2-note">by points per game{slug === 'afl-fantasy' ? ', in your conference' : ''}</span>}
+              </h2>
+              <p class="mp-empty" data-mp-empty hidden={section.rows.some((r) => showRow(r, section.mine))}>{section.empty}</p>
+              {section.rows.length > 0 && (
+                <table class="ui-table mp-grid" style={`--mp-weeks: ${weeks.length}`} data-mp-grid>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="mp-grid-player">Player</th>
+                      <th scope="col" class="mp-grid-ppg">PPG</th>
+                      {allWeeks.map((w) => <th scope="col" class="mp-grid-week" data-week={w} hidden={!inRange(w)}>Wk {w}</th>)}
+                      <th scope="col" class="mp-grid-score" title="Average of what the opponents allow per game; a bye counts as 0">Avg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {section.rows.map((row) => (
+                      <tr
+                        data-pos={row.position}
+                        data-top={section.mine || row.topOverall ? '1' : undefined}
+                        data-ppg={row.ppg ?? ''}
+                        hidden={!showRow(row, section.mine)}
+                      >
+                        <td class="mp-grid-player">
+                          <PlayerCell name={row.name} position={row.position === 'Def' ? 'DEF' : row.position} nflTeam={row.team} mflId={row.id} espnId={row.espnId} size="default">
+                            {injuries[row.id] && (
+                              <span
+                                slot="after-name"
+                                class="injury-indicator injury-indicator--static"
+                                title={injuryBadgeTitle(injuries[row.id])}
+                                aria-label={injuryBadgeTitle(injuries[row.id])}
+                              >{injuryBadgeLabel(injuries[row.id].injuryStatus)}</span>
+                            )}
+                          </PlayerCell>
+                        </td>
+                        <td class="mp-grid-ppg" data-label="PPG">{fmt(row.ppg)}</td>
+                        {row.cells.map((c) => (
+                          c.bye ? (
+                            <td class="mp-cell mp-cell--bye" data-week={c.week} data-bye="1" hidden={!inRange(c.week)}>BYE</td>
+                          ) : (
+                            <td class:list={['mp-cell', c.tier && `mp-tier-${c.tier}`]} data-week={c.week} data-pts={c.avg ?? ''} hidden={!inRange(c.week)} title={`${c.home ? 'vs' : 'at'} ${code(c.opp!)}: allows ${fmt(c.avg)} to ${POSITION_LABELS[row.position]}s per game, rank ${c.rank ?? '—'} of ${teamCount}`}>
+                              <span class="mp-opp">{c.home ? '' : '@'}{code(c.opp!)}</span>
+                              <span class="mp-pts">{fmt(c.avg)}</span>
+                              <span class="mp-rank">#{c.rank ?? '—'}</span>
+                            </td>
+                          )
+                        ))}
+                        <td class="mp-grid-score" data-mp-score>{fmt(row.score)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          ))}
+          <p class="mp-note">
+            Each cell is the opponent (@ = away), the points it gives up per game to that position, and its rank (#32 gives up the most). Avg is what those opponents give up per game across Weeks <span data-mp-range-text>{q.from}–{q.to}</span>, with a bye counted as 0. Up to {MAX_RANGE} weeks at a time.
+          </p>
+        </>
+      ) : (
+        <table class="ui-table mp-table">
+          <thead>
+            <tr>
+              <th scope="col">Defense</th>
+              {PLANNER_POSITIONS.map((p) => (
+                <th scope="col" class="mp-num"><a href={href({ sort: p })} aria-current={q.sort === p ? 'true' : undefined}>{POSITION_LABELS[p]}{q.sort === p && ' ↓'}</a></th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map(([team, row]) => (
+              <tr>
+                <th scope="row" class="mp-team">
+                  <img src={getNFLTeamLogo(team)} alt="" width="20" height="20" loading="lazy" />
+                  <span>{code(team)}</span>
+                </th>
+                {PLANNER_POSITIONS.map((p) => {
+                  const tier = tierOf(row[p].rank);
+                  return (
+                    <td class:list={['mp-num mp-cell', tier && `mp-tier-${tier}`, { 'mp-sorted': q.sort === p }]}>
+                      <span class="mp-avg">{fmt(row[p].avg)}</span>
+                      <span class="mp-rank">{row[p].rank ?? '—'}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" class="mp-team">Avg</th>
+              {PLANNER_POSITIONS.map((p) => <td class="mp-num"><span class="mp-avg">{fmt(averages[p])}</span></td>)}
+            </tr>
+          </tfoot>
+        </table>
+      )}
+
+      <footer class="mp-sources">
+        <p>
+          {officialUsed
+            ? 'Season averages: MFL’s points-allowed totals for this league, divided by games played.'
+            : `Rebuilt week by week from every player’s score in this league${q.window === 'recent' ? `, over each defense’s last ${RECENT_GAMES} games` : ''}.`}
+          {' '}Byes are not counted as games.
+          {data?.rostersLive === false && ' Rosters are from the last sync; live rosters were unavailable.'}
+        </p>
+      </footer>
+    </>
+  )}
+</section>
+
+<script>
+  // Instant position and week switching for the schedule grid (see the
+  // header comment). Bound on every astro:page-load to the planner the swap
+  // just rendered; the root's flag stops a second bind of the same DOM.
+  function initMatchupPlanner() {
+    const root = document.querySelector<HTMLElement>('.mp[data-league]');
+    if (!root || root.dataset.mpInit) return;
+    const grids = Array.from(root.querySelectorAll<HTMLTableElement>('[data-mp-grid]'));
+    if (!grids.length) return;
+    root.dataset.mpInit = '1';
+    const host: HTMLElement = root;
+
+    const maxRange = Number(root.dataset.mpMaxRange) || 5;
+    const defaultFrom = Number(root.dataset.mpDefaultFrom);
+    const defaultTo = Number(root.dataset.mpDefaultTo);
+    const params = new URLSearchParams(location.search);
+    const state = {
+      pos: params.get('pos') || 'all',
+      from: Number(params.get('from')) || defaultFrom,
+      to: Number(params.get('to')) || defaultTo,
+    };
+    // The server clamped the range; read what it actually rendered.
+    const shown = Array.from(grids[0].querySelectorAll<HTMLElement>('thead [data-week]:not([hidden])')).map((th) => Number(th.dataset.week));
+    if (shown.length) {
+      state.from = Math.min(...shown);
+      state.to = Math.max(...shown);
+    }
+    const positions = Array.from(root.querySelectorAll<HTMLElement>('[data-mp-pos]')).map((a) => a.dataset.mpPos!);
+    if (!positions.includes(state.pos)) state.pos = 'all';
+    const posRank = (pos: string) => positions.indexOf(pos);
+
+    const inRange = (w: number) => w >= state.from && w <= state.to;
+    const fmt = (v: number | null) => (v == null ? '—' : v.toFixed(1));
+
+    function rowScore(tr: HTMLElement): number | null {
+      const cells = Array.from(tr.querySelectorAll<HTMLElement>('td[data-week]')).filter((td) => inRange(Number(td.dataset.week)));
+      if (!cells.length) return null;
+      let sum = 0;
+      for (const td of cells) {
+        if (td.dataset.bye) continue;
+        if (td.dataset.pts === '' || td.dataset.pts == null) return null;
+        sum += Number(td.dataset.pts);
+      }
+      return Math.round((sum / cells.length) * 10) / 10;
+    }
+
+    function setParam(url: URL) {
+      if (state.pos === 'all') url.searchParams.delete('pos');
+      else url.searchParams.set('pos', state.pos);
+      if (state.from === defaultFrom && state.to === defaultTo) {
+        url.searchParams.delete('from');
+        url.searchParams.delete('to');
+      } else {
+        url.searchParams.set('from', String(state.from));
+        url.searchParams.set('to', String(state.to));
+      }
+    }
+
+    function apply() {
+      for (const table of grids) {
+        table.style.setProperty('--mp-weeks', String(state.to - state.from + 1));
+        for (const el of Array.from(table.querySelectorAll<HTMLElement>('[data-week]'))) el.hidden = !inRange(Number(el.dataset.week));
+        const body = table.tBodies[0];
+        const rows = Array.from(body.rows);
+        const scored = rows.map((tr) => ({ tr, score: rowScore(tr), ppg: Number(tr.dataset.ppg) || 0, pos: posRank(tr.dataset.pos || '') }));
+        scored.sort((a, b) => a.pos - b.pos || (b.score ?? -1) - (a.score ?? -1) || b.ppg - a.ppg);
+        let visible = 0;
+        for (const r of scored) {
+          const cell = r.tr.querySelector<HTMLElement>('[data-mp-score]');
+          if (cell) cell.textContent = fmt(r.score);
+          r.tr.hidden = state.pos === 'all' ? r.tr.dataset.top !== '1' : r.tr.dataset.pos !== state.pos;
+          if (!r.tr.hidden) visible += 1;
+          body.appendChild(r.tr);
+        }
+        const empty = table.closest('section')?.querySelector<HTMLElement>('[data-mp-empty]');
+        if (empty) empty.hidden = visible > 0;
+      }
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('[data-mp-pos]'))) {
+        a.toggleAttribute('aria-current', a.dataset.mpPos === state.pos);
+        if (a.hasAttribute('aria-current')) a.setAttribute('aria-current', 'true');
+      }
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('[data-mp-from]'))) {
+        const on = Number(a.dataset.mpFrom) === state.from && Number(a.dataset.mpTo) === state.to;
+        if (on) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      }
+      const form = host.querySelector<HTMLFormElement>('[data-mp-range]');
+      if (form) {
+        (form.elements.namedItem('from') as HTMLSelectElement).value = String(state.from);
+        (form.elements.namedItem('to') as HTMLSelectElement).value = String(state.to);
+        const posInput = form.querySelector<HTMLInputElement>('[data-mp-pos-input]');
+        if (posInput) {
+          posInput.value = state.pos;
+          posInput.disabled = state.pos === 'all';
+        }
+      }
+      for (const el of Array.from(host.querySelectorAll<HTMLElement>('[data-mp-range-text]'))) el.textContent = `${state.from}–${state.to}`;
+      // Every other link on the page (league, Season/Last 4, the view tabs)
+      // keeps the chosen position and weeks.
+      for (const a of Array.from(host.querySelectorAll<HTMLAnchorElement>('a[href]:not([data-mp-pos]):not([data-mp-from])'))) {
+        const url = new URL(a.href, location.href);
+        if (url.pathname !== location.pathname) continue;
+        setParam(url);
+        a.href = url.pathname + url.search;
+      }
+      const here = new URL(location.href);
+      setParam(here);
+      history.replaceState(history.state, '', here.pathname + here.search + here.hash);
+    }
+
+    root.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-mp-pos], a[data-mp-from]');
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      if (a.dataset.mpPos) state.pos = a.dataset.mpPos;
+      else {
+        state.from = Number(a.dataset.mpFrom);
+        state.to = Number(a.dataset.mpTo);
+      }
+      apply();
+    });
+
+    const rangeForm = root.querySelector<HTMLFormElement>('[data-mp-range]');
+    // Picking a week applies at once, so the Show button is only for a load
+    // without this script.
+    rangeForm?.querySelector<HTMLElement>('.mp-go')?.setAttribute('hidden', '');
+    rangeForm?.addEventListener('change', () => rangeForm.requestSubmit());
+    rangeForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = e.currentTarget as HTMLFormElement;
+      let from = Number((form.elements.namedItem('from') as HTMLSelectElement).value);
+      let to = Number((form.elements.namedItem('to') as HTMLSelectElement).value);
+      if (from > to) [from, to] = [to, from];
+      if (to - from + 1 > maxRange) to = from + maxRange - 1;
+      state.from = from;
+      state.to = to;
+      apply();
+    });
+  }
+
+  document.addEventListener('astro:page-load', initMatchupPlanner);
+</script>
+
+<style>
+  .mp {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-2xl);
+    color: var(--page-text);
+  }
+  .mp-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+  .mp-title {
+    margin: 0;
+    font-size: var(--font-size-2xl);
+  }
+  .mp-sub,
+  .mp-note,
+  .mp-sources,
+  .mp-legend-text,
+  .mp-h2-note {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+  .mp-sub {
+    margin: 0.25rem 0 0;
+  }
+  .mp-tabs {
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+  .mp-tab {
+    padding: 0.75rem 0;
+    text-decoration: none;
+  }
+  .mp-filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+  .mp-range {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+  .mp-range label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .mp-range select {
+    min-height: 36px;
+    padding: 0 0.5rem;
+    background: var(--content-bg);
+    color: var(--page-text);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    font: inherit;
+  }
+  .mp-go {
+    min-height: 36px;
+  }
+  .mp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin: var(--spacing-sm) 0 var(--spacing-md);
+  }
+  .mp-chip {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+  .mp-section {
+    margin-bottom: var(--spacing-lg);
+  }
+  .mp-h2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 var(--spacing-sm);
+    font-size: var(--font-size-lg);
+  }
+  .mp-h2-note {
+    font-weight: normal;
+  }
+  .mp-empty {
+    padding: var(--spacing-md);
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Shared table chrome. Both tables are sized to fit a 360px phone without
+     sideways scrolling: fixed layout, narrow week/position columns. */
+  .mp-grid,
+  .mp-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--content-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+  }
+  .mp-grid th,
+  .mp-table thead th {
+    padding: 0.5rem 0.375rem;
+    background: var(--content-bg-muted);
+    font-size: var(--font-size-xs);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .mp-grid td,
+  .mp-table td,
+  .mp-table tbody th,
+  .mp-table tfoot th {
+    padding: 0.375rem;
+    border-top: 1px solid var(--content-border);
+    vertical-align: middle;
+  }
+  .mp-grid th.mp-grid-player {
+    text-align: left;
+  }
+  .mp-grid-player {
+    width: 40%;
+    overflow: hidden;
+  }
+  .mp-grid-score {
+    width: 3.25rem;
+    text-align: center;
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-grid-ppg {
+    width: 3.25rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-cell {
+    text-align: center;
+    line-height: 1.2;
+  }
+  .mp-opp,
+  .mp-avg {
+    display: block;
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-opp {
+    font-size: var(--font-size-xs);
+  }
+  .mp-pts {
+    display: block;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-rank {
+    display: block;
+    font-size: var(--font-size-xs);
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+  }
+  .mp-cell--bye {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  /* Matchup tiers: soft tints, never a dark stripe. 4 = softest defense. */
+  .mp-tier-4 {
+    background: var(--badge-success-bg);
+    color: var(--badge-success-text);
+  }
+  .mp-tier-3 {
+    background: color-mix(in srgb, var(--badge-success-bg) 45%, var(--content-bg));
+    color: var(--page-text);
+  }
+  .mp-tier-2 {
+    background: color-mix(in srgb, var(--badge-warning-bg) 55%, var(--content-bg));
+    color: var(--page-text);
+  }
+  .mp-tier-1 {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+  }
+
+  .mp-table th a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .mp-table thead th:first-child,
+  .mp-team {
+    width: 4.5rem;
+    text-align: left;
+  }
+  .mp-team {
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+  }
+  .mp-team img {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+    object-fit: contain;
+  }
+  .mp-team span {
+    vertical-align: middle;
+  }
+  .mp-num {
+    text-align: center;
+  }
+  .mp-sorted .mp-avg {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+    text-underline-offset: 2px;
+  }
+  /* Weeks outside the chosen range and rows outside the chosen position. The
+     phone layout gives some cells a display value, which would beat the
+     browser's own [hidden] rule. */
+  .mp-grid tr[hidden],
+  .mp-grid tr > [hidden] {
+    display: none;
+  }
+  .mp-range .mp-go[hidden] {
+    display: none;
+  }
+  .mp-table tfoot td,
+  .mp-table tfoot th {
+    background: var(--content-bg-muted);
+    color: var(--content-text-muted);
+  }
+
+  @media (max-width: 767px) {
+    .mp {
+      padding: var(--spacing-md) var(--spacing-md) var(--spacing-xl);
+    }
+    .mp-grid,
+    .mp-table {
+      font-size: var(--font-size-xs);
+    }
+    /* Phones: each player is a two-line row — name across the top, then one
+       cell per week and the stretch average — so the name never truncates
+       and five weeks still fit 360px without sideways scrolling. */
+    .mp-grid,
+    .mp-grid thead,
+    .mp-grid tbody {
+      display: block;
+    }
+    .mp-grid tr {
+      display: grid;
+      grid-template-columns: repeat(var(--mp-weeks, 3), minmax(0, 1fr)) 3rem;
+    }
+    .mp-grid th.mp-grid-player {
+      display: none;
+    }
+    /* Row one: the player cell, with PPG in the last column above Avg. */
+    .mp-grid th.mp-grid-ppg {
+      display: none;
+    }
+    .mp-grid td.mp-grid-player {
+      grid-column: 1 / -2;
+      width: auto;
+      padding: 0.5rem 0.5rem 0.25rem;
+    }
+    .mp-grid td.mp-grid-ppg {
+      width: auto;
+      padding: 0.5rem 0.125rem 0.25rem;
+      border-top: 1px solid var(--content-border);
+    }
+    .mp-grid td.mp-grid-ppg::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--content-text-muted);
+      font-size: var(--font-size-2xs);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.04em;
+    }
+    .mp-grid tbody td.mp-cell,
+    .mp-grid tbody td.mp-grid-score {
+      border-top: 0;
+      padding: 0.375rem 0.125rem;
+    }
+    .mp-grid tbody td.mp-grid-score {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mp-grid-score {
+      width: auto;
+    }
+    .mp-grid td,
+    .mp-table td,
+    .mp-table tbody th,
+    .mp-table tfoot th {
+      padding: 0.3rem 0.2rem;
+    }
+    .mp-table thead th:first-child,
+    .mp-team {
+      width: 3.4rem;
+    }
+    .mp-team img {
+      width: 16px;
+      height: 16px;
+      margin-right: 0.125rem;
+    }
+  }
+</style>

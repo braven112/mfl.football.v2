@@ -98,6 +98,14 @@ export interface NavLink {
    */
   platformAdminOnly?: boolean;
 
+  /**
+   * Shown to the site owner alone, on his own franchise session in this
+   * league (`isSiteOwnerIn`, src/utils/site-owner.ts), whatever `visibility`
+   * says. For his personal pages (Matchup Planner), whose own gate no
+   * commissioner passes.
+   */
+  siteOwnerOnly?: boolean;
+
   /** Restrict to specific league only */
   leagueOnly?: LeagueSlug;
 
