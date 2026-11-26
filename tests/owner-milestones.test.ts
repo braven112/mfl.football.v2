@@ -54,7 +54,7 @@ describe('what is new', () => {
   const tenures = { owners: [owner()] };
 
   it('is held now and absent from the baseline', () => {
-    const baseline = allHeldKeys(tenures).filter((k) => k !== 'own-0001:wins-200');
+    const baseline = allHeldKeys(tenures).filter((k: string) => k !== 'own-0001:wins-200');
     expect(newMilestones(tenures, baseline).map((f) => f.key)).toEqual(['own-0001:wins-200']);
   });
 

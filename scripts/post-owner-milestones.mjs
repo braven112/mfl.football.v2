@@ -97,7 +97,9 @@ async function main() {
       continue;
     }
 
-    const botId = process.env[chatConfigFor(league).botEnv];
+    const chat = chatConfigFor(league);
+    const botEnv = chat?.provider === 'groupme' ? chat.botEnv : '';
+    const botId = process.env[botEnv];
     for (const { key, owner, milestone } of fresh) {
       const text = milestoneText({
         owner,
@@ -114,17 +116,17 @@ async function main() {
         console.log(`${tag} ${key} already announced.`);
         continue;
       }
-      const result = await postToGroupMeCapped({
+      const result = await postToGroupMeCapped(/** @type {any} */ ({
         kind: MILESTONE_KIND,
         league: { navSlug: league.navSlug },
         botId,
         text,
         checkStatus: true,
-        onMissingBotId: () => console.warn(`${tag} ${chatConfigFor(league).botEnv} not set.`),
+        onMissingBotId: () => console.warn(`${tag} ${botEnv} not set.`),
         onPosted: () => console.log(`${tag} Posted ${key}.`),
         onHttpError: (status) => console.warn(`${tag} GroupMe HTTP ${status} for ${key}.`),
         onFetchError: (err) => console.warn(`${tag} GroupMe error for ${key}: ${err?.message ?? err}`),
-      });
+      }));
       if (!result.posted) {
         // Give the claim back so tomorrow's run tries again.
         await redisCommand(redis, ['DEL', ck]).catch(() => null);
