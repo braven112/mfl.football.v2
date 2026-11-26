@@ -12,7 +12,7 @@
  *   node scripts/schefter-weekly-articles.mjs --type waiver-pickups [--week 3] [--year 2026] [--dry-run]
  *
  * Article types:
- *   waiver-pickups      BBID waiver claims (Wednesday)
+ *   waiver-pickups      waiver run + FCFS pickups around it (Thursday morning)
  *   weekend-preview     Upcoming NFL weekend (Friday)
  *   matchup-preview     Fantasy matchups + broadcast guide (Saturday)
  *   cut-watch           Teams over roster limit (Sundays, Jul 15–Aug 16)
@@ -27,7 +27,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
@@ -247,6 +247,24 @@ async function main() {
   // Step 6: Load required data files
   console.log(`  Loading data: ${mod.config.requiredData.join(', ')}`);
   const data = await loadDataFiles(dataDir, mod.config.requiredData);
+
+  // Transactions come from MFL LIVE: the committed copy is held back by the
+  // roster sync and can be days old (see fetchLiveTransactions). The disk
+  // copy is only a fallback, and a type can tell which one it got from
+  // `data.transactionsSource` — the waiver column refuses to call a week
+  // empty off a stale copy.
+  if (mod.config.requiredData.includes('transactions')) {
+    try {
+      data.transactions = await fetchLiveTransactions(league, year);
+      data.transactionsSource = 'live';
+    } catch (err) {
+      console.warn(`  [warn] live MFL transactions unavailable (${err.message}); using the committed copy, which may be stale.`);
+      data.transactionsSource = 'disk';
+    }
+    const rows = data.transactions?.transactions?.transaction ?? [];
+    const newest = rows.reduce((m, t) => Math.max(m, parseInt(t.timestamp, 10) || 0), 0);
+    console.log(`  Transactions: ${rows.length} rows (${data.transactionsSource}), newest ${newest ? new Date(newest * 1000).toISOString() : 'none'}`);
+  }
 
   // Also load broadcast mappings if needed
   if (mod.config.requiredData.includes('broadcast-mappings')) {

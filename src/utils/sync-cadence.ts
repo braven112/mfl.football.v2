@@ -274,7 +274,10 @@ export const SCHEFTER_ARTICLE_SLOTS: readonly SchefterArticleSlot[] = [
   // Buck's Notebook: Tuesday, after the Pecking Order (Brandon, 2026-11-16).
   { type: 'history-notebook', weekday: 2, hour: 9, minute: 0 },
   { type: 'schedule-strength', weekday: 3, hour: 9, minute: 0 },
-  { type: 'waiver-pickups', weekday: 3, hour: 22, minute: 0 },
+  // Thursday morning, not Wednesday night: the recap carries the waiver run
+  // AND the first-come-first-served scramble that follows it, which runs well
+  // past midnight (Brandon, 2026-11-26). TheLeague runs at 7 PM, the AFL 8 PM.
+  { type: 'waiver-pickups', weekday: 4, hour: 8, minute: 0 },
   { type: 'matchup-preview', weekday: 6, hour: 11, minute: 0 },
   { type: 'cut-watch', weekday: 0, hour: 8, minute: 0 },
   { type: 'schedule-release', weekday: null, hour: 11, minute: 30 },
