@@ -648,6 +648,24 @@ const hasHighlights = Boolean(
   .franchise-detail--hero .franchise-lockup__bar {
     padding: 0.5rem 0 0;
   }
+  /* On the team-color hero the site's red/blue buttons fight the team color
+     (Brandon, 2026-11-26): white on the team instead. The main action is a
+     solid white button in a darkened team color; the rest are outlined. */
+  .franchise-detail--hero .franchise-action {
+    background: transparent;
+    color: var(--color-white);
+    border-color: color-mix(in srgb, var(--color-white) 60%, transparent);
+  }
+  .franchise-detail--hero .franchise-action:hover {
+    background: color-mix(in srgb, var(--color-white) 14%, transparent);
+    color: var(--color-white);
+  }
+  .franchise-detail--hero .franchise-action--primary,
+  .franchise-detail--hero .franchise-action--primary:hover {
+    background: var(--color-white);
+    border-color: var(--color-white);
+    color: color-mix(in srgb, var(--hf-a, var(--page-text)) 40%, black);
+  }
   .franchise-detail--sections .franchise-section {
     margin-top: 1.5rem;
   }
