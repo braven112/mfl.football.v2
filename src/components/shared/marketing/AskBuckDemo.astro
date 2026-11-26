@@ -180,6 +180,8 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
 
   /* Each turn: "You asked" + the answer card, as on the ask screen. */
   .buckd :global(.buckd__turn) {
+    display: flex;
+    flex-direction: column;
     margin-top: 1rem;
   }
 
@@ -200,6 +202,7 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
 
 <script>
   import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
+  import { askLive, liveAnswer, typeOut } from '../../../utils/league-history/ask-live';
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const node = document.createElement(tag);
@@ -231,28 +234,32 @@ const chips = ASK_EXAMPLES.filter((q: string) => !/\bmy\b/i.test(q) && !sampled.
     root.dataset.busy = 'true';
     status.textContent = '';
     const turn = turnFor(question, 'You asked');
-    const pending = el('div', 'hask-pending', 'Buck is digging through the archives…');
-    pending.setAttribute('role', 'status');
-    turn.append(pending);
+    // Buck answers live: each lookup as he runs it, then his words (ask-live.ts).
+    const live = liveAnswer();
+    turn.append(live.node);
     thread.prepend(turn);
 
     try {
-      const res = await fetch('/api/league-history/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ league: root.dataset.league, question }),
-      });
-      const data = (await res.json().catch(() => ({}))) as ClientAnswer & {
-        guest?: { used: number; limit: number; hasEmail: boolean } | null;
-        needEmail?: boolean;
-      };
+      let typed = false;
+      const res = await askLive<ClientAnswer & { guest?: { used: number; limit: number; hasEmail: boolean } | null; needEmail?: boolean }>(
+        { league: root.dataset.league ?? '', question },
+        {
+          step: live.step,
+          answer: (text) => {
+            typed = true;
+            live.answer(text);
+          },
+        },
+      );
+      const data = res.data;
       if (!res.ok || data.error) {
         turn.remove();
         status.textContent = data.error ?? 'Something went wrong. Try again.';
         if (res.status === 429) status.append(' ', continueLink(root, null, 'Keep asking on the league’s own page'));
         return false;
       }
-      pending.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
+      if (!typed) await typeOut(live, data.answer);
+      live.node.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
       turn.append(continueLink(root, data.id, 'Ask Buck a follow-up'));
       const left = data.guest ? Math.max(0, data.guest.limit - data.guest.used) : null;
       if (left !== null) status.textContent = left > 0 ? `${left} free ${left === 1 ? 'question' : 'questions'} left today.` : 'That was today’s last free question.';

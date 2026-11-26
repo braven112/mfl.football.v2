@@ -27,7 +27,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getAuthUser } from '../../../utils/auth';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
-import { readAnswer } from '../../../utils/league-history/ask-store';
+import { conversationTurns, loadConversation, readAnswer } from '../../../utils/league-history/ask-store';
 import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
 import { canGuestAsk, GUEST_EMAIL_QUESTIONS, GUEST_FREE_QUESTIONS } from '../../../utils/league-history/guest-ask';
 import { SHARED_APP_ORIGIN } from '../../../config/leagues';
@@ -63,7 +63,11 @@ const first = Astro.url.searchParams.get('q')?.trim().slice(0, 300) ?? '';
 // Starters sit in the intro until the first answer; then the dock carries follow-ups.
 const chips = parent?.followUps ?? [];
 const span = data.firstSeason && data.lastSeason ? `${data.firstSeason} to ${data.lastSeason}` : '';
-const earlier = parent?.turns ?? [];
+// The whole conversation, every earlier answer with its chart (Brandon,
+// 2026-11-26), falling back to text for turns too old to read back.
+const chain = parent ? await loadConversation(parent).catch(() => []) : [];
+const earlier = parent ? conversationTurns(parent, chain) : [];
+const firstQuestion = earlier.length ? ('full' in earlier[0] ? earlier[0].full.question : earlier[0].text.question) : (parent?.question ?? '');
 const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
 ---
 
@@ -77,6 +81,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     data-first={canAsk ? first : ''}
     data-turns={String(earlier.length + (parent ? 1 : 0))}
     data-guest={guest ? 'true' : undefined}
+    data-first-question={firstQuestion}
   >
     <header class="hask-top">
       <a class="hask-icon" href={`${base}/history`} aria-label="Back to History">
@@ -120,17 +125,24 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
           </ul>
         </div>
       )}
-      {earlier.map((t, i) => (
-        <section class="hask-turn hask-turn--earlier">
-          <p class="hask-asked"><span class="hask-asked__kicker">{asked(i)}</span>{t.question}</p>
-          <p class="hask-earlier">{t.answer}</p>
-        </section>
-      ))}
+      {earlier.map((t, i) =>
+        'full' in t ? (
+          <section class="hask-turn">
+            <p class="hask-asked"><span class="hask-asked__kicker">{asked(i)}</span>{t.full.question}</p>
+            <HistoryAnswer headline={t.full.headline} answer={t.full.answer} table={t.full.table} asOf={t.full.asOf} records={t.full.records} base={base} />
+          </section>
+        ) : (
+          <section class="hask-turn hask-turn--earlier">
+            <p class="hask-asked"><span class="hask-asked__kicker">{asked(i)}</span>{t.text.question}</p>
+            <p class="hask-earlier">{t.text.answer}</p>
+          </section>
+        ),
+      )}
       {parent && (
         <section class="hask-turn">
           <p class="hask-asked"><span class="hask-asked__kicker">{asked(earlier.length)}</span>{parent.question}</p>
           <HistoryAnswer headline={parent.headline} answer={parent.answer} table={parent.table} asOf={parent.asOf} records={parent.records} base={base} />
-          <button class="cta cta--primary hask-share" type="button" data-hask-share data-id={parent.id} data-question={parent.question}>Share to the group chat</button>
+          <button class="cta cta--primary hask-share" type="button" data-hask-share data-id={parent.id} data-question={firstQuestion}>Share to the group chat</button>
         </section>
       )}
     </div>
@@ -192,6 +204,7 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
 <script>
   import { renderAnswer, type ClientAnswer } from '../../../utils/league-history/ask-render';
   import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+  import { chatTurn } from '../../../utils/league-history/ask-live';
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
     const node = document.createElement(tag);
@@ -223,54 +236,40 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     root.querySelector('[data-hask-intro]')?.remove();
 
     const n = Number(root.dataset.turns ?? '0');
-    const turn = el('section', 'hask-turn');
-    const q = el('p', 'hask-asked');
-    q.append(el('span', 'hask-asked__kicker', n === 0 ? 'You asked' : 'Then you asked'), question);
-    const pending = el('div', 'hask-pending', 'Buck is digging through the archives…');
-    pending.setAttribute('role', 'status');
-    turn.append(q, pending);
-    thread.append(turn);
-    turn.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
+    if (n === 0) root.dataset.firstQuestion = question;
     try {
-      const res = await fetch('/api/league-history/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ league: root.dataset.league, question, after: root.dataset.after || undefined }),
-      });
-      const data = (await res.json().catch(() => ({}))) as ClientAnswer & { guest?: GuestAllowance | null; needEmail?: boolean };
-      if (data.guest !== undefined) showGuest(root, data.guest ?? null, Boolean(data.needEmail));
-      if (!res.ok || data.error) {
-        turn.remove();
-        status.textContent = data.error ?? 'Something went wrong. Try again.';
+      const outcome = await chatTurn<{ guest?: GuestAllowance | null; needEmail?: boolean }>(
+        {
+          thread,
+          league: root.dataset.league ?? '',
+          base: root.dataset.base ?? '',
+          question,
+          after: root.dataset.after ?? '',
+          turns: n,
+          firstQuestion: root.dataset.firstQuestion ?? question,
+        },
+        renderAnswer,
+      );
+      const data = outcome.data;
+      if (data && data.guest !== undefined) showGuest(root, data.guest ?? null, Boolean(data.needEmail));
+      if (!outcome.ok) {
+        status.textContent = outcome.error;
         return false;
       }
-      pending.replaceWith(renderAnswer(data, root.dataset.base ?? ''));
       root.dataset.turns = String(n + 1);
-      if (data.id) {
-        root.dataset.after = data.id;
+      if (outcome.data.id) {
+        root.dataset.after = outcome.data.id;
         const url = new URL(location.href);
         url.searchParams.delete('q');
-        url.searchParams.set('after', data.id);
+        url.searchParams.set('after', outcome.data.id);
         history.replaceState(history.state, '', url);
         root.querySelector<HTMLElement>('.hask-top [data-hask-share]')?.removeAttribute('hidden');
-        // Every answer carries its own Share, under it, where the thumb is.
-        const shareButton = el('button', 'cta cta--primary hask-share', 'Share to the group chat') as HTMLButtonElement;
-        shareButton.type = 'button';
-        shareButton.dataset.haskShare = '';
-        shareButton.dataset.id = data.id;
-        shareButton.dataset.question = question;
-        turn.append(shareButton);
-        void prefetchCard({ league: root.dataset.league ?? '', id: data.id });
+        void prefetchCard({ league: root.dataset.league ?? '', id: outcome.data.id });
       }
-      if (data.followUps?.length) setChips(root, data.followUps);
+      if (outcome.data.followUps?.length) setChips(root, outcome.data.followUps);
       const input = root.querySelector<HTMLInputElement>('.hask-input');
       if (input) input.placeholder = 'Ask a follow-up…';
       return true;
-    } catch {
-      turn.remove();
-      status.textContent = 'Lost the connection. Try again.';
-      return false;
     } finally {
       delete root.dataset.busy;
     }
@@ -332,7 +331,8 @@ const asked = (i: number) => (i === 0 ? 'You asked' : 'Then you asked');
     // The header icon shares the latest answer; an answer's own button, that one.
     const id = button.dataset.id || root.dataset.after;
     if (!id) return;
-    const question = button.dataset.question ?? root.querySelector('.hask-turn:last-child .hask-asked')?.lastChild?.textContent ?? '';
+    // The conversation's first question leads the Share text, so a follow-up never goes out without its context.
+    const question = button.dataset.question || root.dataset.firstQuestion || '';
     const outcome = await shareAnswer({ league: root.dataset.league ?? '', base: root.dataset.base ?? '', id, question });
     if (outcome !== 'copied') return;
     button.dataset.copied = 'true';

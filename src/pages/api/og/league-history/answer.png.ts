@@ -14,7 +14,7 @@
 import type { APIRoute } from 'astro';
 import { getLeagueBySlug, leagueUrl } from '../../../../config/leagues';
 import { readAnswer } from '../../../../utils/league-history/ask-store';
-import { askAtLabel, cardTeams, renderAnswerCardPng, teamIcon } from '../../../../utils/league-history/answer-card';
+import { askAtLabel, cardBars, cardTeams, renderAnswerCardPng, teamIcon } from '../../../../utils/league-history/answer-card';
 import { logoDataUri } from '../../../../utils/league-history/record-card';
 import { hasLeagueHistoryProduct, loadLeagueHistory } from '../../../../utils/league-history/datasets';
 
@@ -36,8 +36,13 @@ export const GET: APIRoute = async ({ url }) => {
 	const logos = (await Promise.all(teams.map((t) => logoDataUri(teamIcon(data, t.franchiseId, t.year), url.origin)))).filter(
 		(l): l is string => !!l,
 	);
+	// A follow-up's card leads with the question its conversation started with:
+	// the opener of its stored turns (never text from the query string).
+	const context = saved.turns?.length ? saved.turns[0].question : null;
 	try {
 		const png = await renderAnswerCardPng({
+			context,
+			bars: cardBars(saved.table?.chart),
 			leagueName: league.name,
 			question: saved.question,
 			headline: saved.headline ?? null,

@@ -1,8 +1,15 @@
 /**
  * POST /api/league-history/ask — Ask the History.
- * Body: `{ "league": "theleague" | "afl-fantasy", "question": "...", "after"?: "<answer id>" }`
+ * Body: `{ "league": "theleague" | "afl-fantasy", "question": "...", "after"?: "<answer id>", "stream"?: true }`
  * → `{ id, answer, headline, followUps, table, steps }`; `id` opens the
  *   shareable answer page at /<league>/history/ask/<id>.
+ *
+ * `stream: true` (the live chat) answers as newline-delimited JSON once the
+ * question is accepted: `{type:'step',text}` per lookup as it runs,
+ * `{type:'answer',text}` with the answer so far as it is written, then ONE
+ * `{type:'done', ...the JSON body above}` or `{type:'error', error}`. Anything
+ * refused before the work starts (sign-in, rate limit, a bad question) is
+ * still a plain JSON error with its status, so the client reads both.
  *
  * `after` makes it a follow-up: the earlier answers in that conversation are
  * read back from the store (never from the request), so "what about in the
@@ -28,7 +35,7 @@ import { franchiseIdForLeague, getAuthUser } from '../../../utils/auth';
 import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { canAskLeagueHistory } from '../../../utils/league-history/access';
-import { askHistory, type AskAsker, type AskData } from '../../../utils/league-history/ask';
+import { askHistory, type AskAsker, type AskData, type AskEvent } from '../../../utils/league-history/ask';
 import { readAnswer, recordAsk, saveAnswer, turnsAfter } from '../../../utils/league-history/ask-store';
 import { hasLeagueHistoryProduct, loadLeagueCompetitions, loadLeagueHistoryDataset, loadLeagueSalaries } from '../../../utils/league-history/datasets';
 import {
@@ -60,6 +67,42 @@ function json(data: unknown, status = 200, setCookie?: string): Response {
 	return new Response(JSON.stringify(data), { status, headers });
 }
 
+/** The work of one accepted question: the final body and its status, with live events on the way. */
+type AskWork = (onEvent?: (event: AskEvent) => void) => Promise<{ status: number; body: Record<string, unknown> }>;
+
+/** Run the work and answer as one JSON body, or as the live NDJSON stream (see the header). */
+async function respond(work: AskWork, stream: boolean, setCookie?: string): Promise<Response> {
+	if (!stream) {
+		const { status, body } = await work();
+		return json(body, status, setCookie);
+	}
+	const encoder = new TextEncoder();
+	const body = new ReadableStream<Uint8Array>({
+		async start(controller) {
+			let open = true;
+			const send = (event: Record<string, unknown>) => {
+				if (!open) return;
+				try {
+					controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+				} catch {
+					open = false; // the browser left; the answer is still saved
+				}
+			};
+			try {
+				const { status, body: final } = await work((event) => send(event));
+				send(status < 400 ? { type: 'done', ...final } : { type: 'error', ...final });
+			} catch (e) {
+				console.error('[league-history/ask] stream failed:', e);
+				send({ type: 'error', error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' });
+			}
+			if (open) controller.close();
+		},
+	});
+	const headers: Record<string, string> = { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' };
+	if (setCookie) headers['Set-Cookie'] = setCookie;
+	return new Response(body, { status: 200, headers });
+}
+
 /** GET → where a signed-out visitor stands today, for the ask screen's counter. */
 export const GET: APIRoute = async ({ request, url }) => {
 	const league = getLeagueBySlug(url.searchParams.get('league') ?? '');
@@ -70,7 +113,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 };
 
 /** A signed-out visitor's question, on the public demo league. */
-async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeof getLeagueBySlug>>, question: string, after: string): Promise<Response> {
+async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeof getLeagueBySlug>>, question: string, after: string, stream: boolean): Promise<Response> {
 	if (!isCleanQuestion(question)) return json({ error: 'Keep it clean, and ask it another way.' }, 400);
 	const existing = guestIdFrom(request);
 	const id = existing ?? newGuestId();
@@ -91,50 +134,55 @@ async function askAsGuest(request: Request, league: NonNullable<ReturnType<typeo
 	const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
 	const turns = parent?.guest && parent.askedBy.franchiseId === asker ? turnsAfter(parent) : [];
 
-	let result;
-	try {
-		const [loaded, competitions, salaries] = await Promise.all([
-			loadLeagueHistoryDataset(league.dataPath),
-			loadLeagueCompetitions(league.dataPath, league.configPath),
-			// A contract league's salaries, for the careers unit (ask-careers.mjs).
-			leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
-		]);
-		if (!loaded) {
+	const work: AskWork = async (onEvent) => {
+		let result;
+		try {
+			const [loaded, competitions, salaries] = await Promise.all([
+				loadLeagueHistoryDataset(league.dataPath),
+				loadLeagueCompetitions(league.dataPath, league.configPath),
+				// A contract league's salaries, for the careers unit (ask-careers.mjs).
+				leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
+			]);
+			if (!loaded) {
+				await spend.refund();
+				return { status: 404, body: { error: 'Unknown league.' } };
+			}
+			const ds = maskAskData({ ...loaded, competitions, salaries }, mask);
+			result = maskValue(
+				await askHistory(league.slug, ds, question, {
+					turns,
+					asker: null,
+					model: aiModelForLeague(league.slug, { guest: true }),
+					onUsage: (u) => void recordAiUsage(`${league.slug}-guest`, u).catch(() => {}),
+					// Masked whole on every event, like the final answer, so a live line never shows a real name.
+					onEvent: onEvent && ((event) => onEvent(maskValue(event, mask))),
+				}),
+				mask,
+			);
+		} catch (e) {
 			await spend.refund();
-			return json({ error: 'Unknown league.' }, 404, cookie);
+			console.error('[league-history/ask] guest failed:', e);
+			return { status: 503, body: { error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.', guest: { ...allowance, used: allowance.used - 1 } } };
 		}
-		const ds = maskAskData({ ...loaded, competitions, salaries }, mask);
-		result = maskValue(
-			await askHistory(league.slug, ds, question, {
-				turns,
-				asker: null,
-				model: aiModelForLeague(league.slug, { guest: true }),
-				onUsage: (u) => void recordAiUsage(`${league.slug}-guest`, u).catch(() => {}),
-			}),
-			mask,
-		);
-	} catch (e) {
-		await spend.refund();
-		console.error('[league-history/ask] guest failed:', e);
-		return json({ error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.', guest: { ...allowance, used: allowance.used - 1 } }, 503, cookie);
-	}
 
-	let saved = null;
-	try {
-		saved = await saveAnswer({
-			league: league.slug,
-			question,
-			...result,
-			parent: turns.length ? parent!.id : null,
-			turns,
-			askedBy: { franchiseId: asker, name: null },
-			guest: true,
-		});
-	} catch (e) {
-		console.error('[league-history/ask] guest save failed:', e);
-	}
-	await recordFunnel('ask_demo_question', 'mfl', id).catch(() => false);
-	return json({ id: saved?.id ?? null, question, ...result, guest: allowance }, 200, cookie);
+		let saved = null;
+		try {
+			saved = await saveAnswer({
+				league: league.slug,
+				question,
+				...result,
+				parent: turns.length ? parent!.id : null,
+				turns,
+				askedBy: { franchiseId: asker, name: null },
+				guest: true,
+			});
+		} catch (e) {
+			console.error('[league-history/ask] guest save failed:', e);
+		}
+		await recordFunnel('ask_demo_question', 'mfl', id).catch(() => false);
+		return { status: 200, body: { id: saved?.id ?? null, question, ...result, guest: allowance } };
+	};
+	return respond(work, stream, cookie);
 }
 
 
@@ -154,11 +202,13 @@ export const POST: APIRoute = async ({ request }) => {
 	let question = '';
 	let slug = '';
 	let after = '';
+	let stream = false;
 	try {
-		const body = (await request.json()) as { question?: unknown; league?: unknown; after?: unknown };
+		const body = (await request.json()) as { question?: unknown; league?: unknown; after?: unknown; stream?: unknown };
 		question = typeof body?.question === 'string' ? body.question.trim() : '';
 		slug = typeof body?.league === 'string' ? body.league : '';
 		after = typeof body?.after === 'string' ? body.after : '';
+		stream = body?.stream === true;
 	} catch {
 		return json({ error: 'Invalid request body' }, 400);
 	}
@@ -170,7 +220,7 @@ export const POST: APIRoute = async ({ request }) => {
 	if (question.length > MAX_QUESTION) return json({ error: `Keep it under ${MAX_QUESTION} characters.` }, 400);
 
 	if (!user) {
-		if (canGuestAsk(league.slug)) return askAsGuest(request, league, question, after);
+		if (canGuestAsk(league.slug)) return askAsGuest(request, league, question, after, stream);
 		return json({ error: 'Sign in to ask the history.' }, 401);
 	}
 	if (!canAskLeagueHistory(user, league.id)) return json({ error: `Asking is for ${league.name} owners.` }, 403);
@@ -182,44 +232,48 @@ export const POST: APIRoute = async ({ request }) => {
 	const parent = after ? await readAnswer(league.slug, after).catch(() => null) : null;
 	const turns = parent ? turnsAfter(parent) : [];
 
-	let result;
-	try {
-		// Only the league asked about, per request (utils/league-history/datasets).
-		const [loaded, competitions, salaries] = await Promise.all([
-			loadLeagueHistoryDataset(league.dataPath),
-			loadLeagueCompetitions(league.dataPath, league.configPath),
-			// A contract league's salaries, for the careers unit (ask-careers.mjs).
-			leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
-		]);
-		if (!loaded) return json({ error: 'Unknown league.' }, 404);
-		// Owners credited through approved owner links (utils/owner-link-live.ts).
-		const history = await loadLiveLeagueHistory(league.slug, loaded.history);
-		const ds: AskData = { ...loaded, history, competitions, salaries };
-		result = await askHistory(league.slug, ds, question, {
-			turns,
-			asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
-			onUsage: (u) => void recordAiUsage(league.slug, u).catch(() => {}),
-		});
-	} catch (e) {
-		console.error('[league-history/ask] failed:', e);
-		return json({ error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' }, 503);
-	}
+	const work: AskWork = async (onEvent) => {
+		let result;
+		try {
+			// Only the league asked about, per request (utils/league-history/datasets).
+			const [loaded, competitions, salaries] = await Promise.all([
+				loadLeagueHistoryDataset(league.dataPath),
+				loadLeagueCompetitions(league.dataPath, league.configPath),
+				// A contract league's salaries, for the careers unit (ask-careers.mjs).
+				leagueHasFeature(league.slug, 'contracts') ? loadLeagueSalaries(league.dataPath) : Promise.resolve(null),
+			]);
+			if (!loaded) return { status: 404, body: { error: 'Unknown league.' } };
+			// Owners credited through approved owner links (utils/owner-link-live.ts).
+			const history = await loadLiveLeagueHistory(league.slug, loaded.history);
+			const ds: AskData = { ...loaded, history, competitions, salaries };
+			result = await askHistory(league.slug, ds, question, {
+				turns,
+				asker: askerOf(ds.history, franchiseIdForLeague(user, league.id)),
+				onUsage: (u) => void recordAiUsage(league.slug, u).catch(() => {}),
+				onEvent,
+			});
+		} catch (e) {
+			console.error('[league-history/ask] failed:', e);
+			return { status: 503, body: { error: 'Could not work that one out right now. Try again in a minute, or ask it a different way.' } };
+		}
 
-	let id: string | null = null;
-	try {
-		const saved = await saveAnswer({
-			league: league.slug,
-			question,
-			...result,
-			parent: parent?.id ?? null,
-			turns,
-			askedBy: { franchiseId: user.franchiseId, name: user.name || null },
-		});
-		id = saved?.id ?? null;
-		if (saved) await recordAsk(saved).catch((e) => console.error('[league-history/ask] count failed:', e));
-	} catch (e) {
-		// The answer still stands; it just has no share link.
-		console.error('[league-history/ask] save failed:', e);
-	}
-	return json({ id, question, ...result });
+		let id: string | null = null;
+		try {
+			const saved = await saveAnswer({
+				league: league.slug,
+				question,
+				...result,
+				parent: parent?.id ?? null,
+				turns,
+				askedBy: { franchiseId: user.franchiseId, name: user.name || null },
+			});
+			id = saved?.id ?? null;
+			if (saved) await recordAsk(saved).catch((e) => console.error('[league-history/ask] count failed:', e));
+		} catch (e) {
+			// The answer still stands; it just has no share link.
+			console.error('[league-history/ask] save failed:', e);
+		}
+		return { status: 200, body: { id, question, ...result } };
+	};
+	return respond(work, stream);
 };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askAtLabel, buildAnswerCardTree, cardTeams, MAX_TIE_LOGOS, clipWords, headlineSize, teamIcon, ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../src/utils/league-history/answer-card';
+import { askAtLabel, buildAnswerCardTree, cardBars, cardTeams, MAX_CARD_BARS, MAX_TIE_LOGOS, clipWords, headlineSize, teamIcon, ANSWER_CARD_HEIGHT, ANSWER_CARD_WIDTH } from '../src/utils/league-history/answer-card';
 import { shareText } from '../src/utils/league-history/share-answer';
 
 describe('Ask the History share card', () => {
@@ -62,5 +62,29 @@ describe('Ask the History share card', () => {
       expect(cardTeams({ rows: [row(null, 3)] }, { value: '3' })).toEqual([]);
       expect(cardTeams(null, { value: '3' })).toEqual([]);
     });
+  });
+});
+
+describe('a follow-up\'s share card (Brandon, 2026-11-26: first question + latest answer)', () => {
+  const text = (node: any): string => (typeof node === 'string' ? node : [node?.props?.children ?? []].flat().map(text).join(' '));
+  const base = { leagueName: 'The League', question: 'What about in the playoffs?', headline: { value: '14-3', label: 'Playoff record' }, answer: 'Even better.', askAt: 'theleague.us/history/ask' };
+
+  it('leads with the question the conversation started with', () => {
+    const tree = text(buildAnswerCardTree({ ...base, context: 'Who has the most titles?' }));
+    expect(tree).toContain('It started with “Who has the most titles?”');
+    expect(tree).toContain('Then: “What about in the playoffs?”');
+    expect(text(buildAnswerCardTree(base))).not.toContain('It started with');
+  });
+
+  it('draws the ranking chart as a few bars, and no bars for a chart that does not flatten', () => {
+    const rows = [14, 11, 9, 7, 5, 3].map((value, i) => ({ value, display: String(value), name: `Team ${i}`, context: '2024' }));
+    const bars = cardBars({ rows } as any);
+    expect(bars).toHaveLength(MAX_CARD_BARS);
+    expect(bars[0]).toEqual({ name: 'Team 0 · 2024', display: '14', share: 1 });
+    expect(bars[1].share).toBeCloseTo(11 / 14);
+    expect(cardBars({ kind: 'stack', rows } as any)).toEqual([]);
+    expect(cardBars({ rows: rows.slice(0, 1) } as any)).toEqual([]);
+    expect(cardBars(null)).toEqual([]);
+    expect(text(buildAnswerCardTree({ ...base, bars }))).toContain('Team 0 · 2024');
   });
 });

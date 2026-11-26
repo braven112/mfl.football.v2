@@ -611,11 +611,29 @@
 .hask-turn .ha-answer {
   margin-top: 0;
 }
+/* The asker's message, a chat bubble on the right (Brandon, 2026-11-26: one
+   conversation, not a list of separate questions). Its kicker stays for
+   screen readers only. */
 .hask-asked {
+  align-self: flex-end;
+  max-width: min(85%, 34rem);
   margin: 0;
-  font-size: var(--font-size-lg);
+  padding: 0.625rem 0.875rem;
+  font-size: var(--font-size-base, 1rem);
   font-weight: var(--font-weight-semibold);
   line-height: 1.35;
+  background: var(--history-gold-wash);
+  border: 1px solid var(--content-border);
+  border-radius: 1.125rem 1.125rem 0.25rem 1.125rem;
+  overflow-wrap: anywhere;
+}
+.hask-asked .hask-asked__kicker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .hask-earlier {
   margin: 0;
@@ -624,35 +642,9 @@
   font-size: var(--font-size-sm);
   border-left: 2px solid var(--content-border);
 }
-.hask-pending {
-  padding: 1.25rem 1rem;
-  color: var(--content-text-muted);
-  font-size: var(--font-size-sm);
-  background: var(--card-bg);
-  border: 1px solid var(--content-border);
-  border-top: 4px solid var(--history-gold);
-  border-radius: var(--radius-lg, 16px);
-}
-.hask-pending::after {
-  content: '';
-  display: inline-block;
-  width: 0.75em;
-  height: 0.75em;
-  margin-left: 0.5em;
-  border: 2px solid var(--history-gold);
-  border-right-color: transparent;
-  border-radius: 50%;
-  vertical-align: -0.1em;
-  animation: ha-spin 0.8s linear infinite;
-}
 @keyframes ha-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hask-pending::after {
-    animation: none;
   }
 }
 /* Pinned to the bottom, so a thumb can keep asking. */
@@ -909,4 +901,146 @@
    under the byline that read as touching the divider. */
 .ha-by + .ha-head {
   padding-top: 0.5rem;
+}
+
+/* Buck answering live (ask-live.ts): what he is looking up ticks in, then his
+   words as he writes them; the finished answer card replaces it. */
+.ha-live__status {
+  margin: 0.5rem 0 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+.ha-live__status::after {
+  content: '';
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.5em;
+  border: 2px solid var(--history-gold);
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  animation: ha-spin 0.8s linear infinite;
+}
+.ha-live__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ha-live__steps:empty {
+  display: none;
+}
+.ha-live__step {
+  position: relative;
+  padding-left: 1.5rem;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  animation: ha-live-in 0.25s ease-out;
+}
+.ha-live__step::before {
+  content: '';
+  position: absolute;
+  top: 0.3em;
+  left: 0.25rem;
+  width: 0.375rem;
+  height: 0.7rem;
+  border: solid var(--history-gold);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ha-live__words {
+  margin-top: 0.75rem;
+}
+.ha-live__words::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 0.125em;
+  vertical-align: -0.125em;
+  background: var(--history-gold);
+  animation: ha-live-caret 1s steps(1) infinite;
+}
+@keyframes ha-live-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes ha-live-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ha-live__status::after,
+  .ha-live__step,
+  .ha-live__words::after {
+    animation: none;
+  }
+}
+
+/* The History home's ask box, now a chat in place (HistoryAsk.astro). */
+.ha-chat[hidden] {
+  display: none;
+}
+.ha-chat {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.ha-chat .ha-answer {
+  margin-top: 0;
+}
+.ha-chat__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ha-bar__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  color: var(--page-text);
+  font: inherit;
+  font-size: var(--font-size-base, 1rem);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.ha .ha-bar__input:focus,
+.ha .ha-bar__input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.ha-bar__input::placeholder {
+  color: var(--content-text-muted);
+}
+.ha-bar__go {
+  border: 0;
+  cursor: pointer;
+}
+.ha-bar:focus-within {
+  border-color: var(--history-gold);
+}
+.ha__example {
+  cursor: pointer;
+}
+button.ha__example {
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+.ha-chat__foot[hidden] {
+  display: none;
+}
+.ha-chat__foot {
+  margin: 0.75rem 0 0;
+  font-size: var(--font-size-sm);
 }

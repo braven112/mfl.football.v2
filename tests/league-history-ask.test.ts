@@ -10,7 +10,7 @@ import aflPlayers from '../data/afl-fantasy/derived/league-history-players.json'
 import theleagueMoves from '../data/theleague/derived/league-history-moves.json';
 import aflMoves from '../data/afl-fantasy/derived/league-history-moves.json';
 import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery, teamRenames } from '../src/utils/league-history/ask-query.mjs';
-import { askHistory } from '../src/utils/league-history/ask';
+import { askHistory, partialAnswer } from '../src/utils/league-history/ask';
 import { AI_PLANS } from '../src/utils/ai-plan.mjs';
 
 const SONNET = AI_PLANS.custom.model;
@@ -403,6 +403,86 @@ describe('askHistory', () => {
     expect(system).toContain('Trash talk comes back on the asker');
     expect(system).toContain('sorted by winPct then pf');
     expect(system).toMatch(/never make sexuality, race, religion/);
+  });
+
+  /**
+   * A scripted model that STREAMS (the live chat, Brandon 2026-11-26): each
+   * round replays its answer-tool input as growing partial snapshots, the way
+   * the SDK's MessageStream reports eager tool input.
+   */
+  function streamed(turns: Array<Array<Record<string, unknown>>>) {
+    const seen: any[] = [];
+    let i = 0;
+    return {
+      seen,
+      client: {
+        messages: {
+          create: async () => {
+            throw new Error('a live ask must stream');
+          },
+          stream: (body: any) => {
+            seen.push(body);
+            const content = turns[i++] ?? [];
+            const listeners: Array<(e: any, s: any) => void> = [];
+            return {
+              on: (_: 'streamEvent', fn: (e: any, s: any) => void) => void listeners.push(fn),
+              finalMessage: async () => {
+                content.forEach((block: any, index) => {
+                  const emit = (e: any) => listeners.forEach((fn) => fn(e, null));
+                  emit({ type: 'content_block_start', index, content_block: { type: 'tool_use', id: block.id, name: block.name, input: {} } });
+                  // The raw input JSON in small pieces, cut anywhere (mid-word, mid-escape).
+                  const json = JSON.stringify(block.input);
+                  for (let n = 0; n < json.length; n += 5) emit({ type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: json.slice(n, n + 5) } });
+                });
+                return { content, stop_reason: 'tool_use' };
+              },
+            };
+          },
+        },
+      },
+    };
+  }
+
+  it('streams a live ask: each lookup as it runs, then the answer as it is written', async () => {
+    const { client, seen } = streamed([
+      [{ type: 'tool_use', id: 't1', name: 'run_query', input: nineOne }],
+      [{ type: 'tool_use', id: 't2', name: 'answer', input: { show: 0, answer: 'Yes, twice: "2014" and 2019 \u2014 both.' } }],
+    ]);
+    const events: any[] = [];
+    const res = await askHistory('theleague', TL, 'started 9-1 with fewer points?', { client, onEvent: (e) => events.push(e) });
+    expect(res.answer).toBe('Yes, twice: "2014" and 2019 \u2014 both.');
+    expect(events[0]).toEqual({ type: 'step', text: res.steps[0] });
+    const words = events.filter((e) => e.type === 'answer').map((e) => e.text);
+    expect(words.length).toBeGreaterThan(2);
+    expect(words.at(-1)).toBe(res.answer);
+    // Each event carries the whole answer so far, growing, never a delta.
+    words.forEach((w, i) => i && expect(w.startsWith(words[i - 1])).toBe(true));
+    // Only the answer tool streams its input eagerly.
+    const tools = seen[0].tools as any[];
+    expect(tools.filter((t) => t.eager_input_streaming).map((t) => t.name)).toEqual(['answer']);
+  });
+
+  it('reads the answer so far out of half-written tool JSON', () => {
+    expect(partialAnswer('{"show": 0, "ans')).toBeNull();
+    expect(partialAnswer('{"show": 0, "answer": "Yes, the Pig')).toBe('Yes, the Pig');
+    expect(partialAnswer('{"answer": "a \\"b\\" c\\')).toBe('a "b" c');
+    expect(partialAnswer('{"answer": "x \\u20')).toBe('x ');
+    expect(partialAnswer('{"answer": "x \\u2014 y", "show": 1}')).toBe('x \u2014 y');
+    expect(partialAnswer('{"headline": {"label": "the answer"}, "answer": "Done."}')).toBe('Done.');
+  });
+
+  it('keeps the plain call when nobody is listening, and never runs a turn cut off by max_tokens', async () => {
+    const { client, seen } = scripted([[{ type: 'tool_use', id: 't1', name: 'answer', input: { answer: 'Yes.', show: -1 } }]]);
+    await askHistory('theleague', TL, 'q', { client, onEvent: () => {} });
+    expect(seen[0].tools.some((t: any) => t.eager_input_streaming)).toBe(false);
+    const cut = { messages: { create: async () => ({ content: [{ type: 'tool_use', id: 't1', name: 'answer', input: { answer: 'Ye' } }], stop_reason: 'max_tokens' }) } };
+    await expect(askHistory('theleague', TL, 'q', { client: cut })).rejects.toThrow();
+  });
+
+  it('answers a follow-up as the next reply in one conversation', async () => {
+    const { client, seen } = scripted([[{ type: 'tool_use', id: 't1', name: 'answer', input: { answer: 'Yes.', show: -1 } }]]);
+    await askHistory('theleague', TL, 'what about the playoffs?', { client, turns: [{ question: 'Most titles?', answer: 'Ten.', steps: [] }] });
+    expect(String(seen[0].messages[0].content)).toContain('Answer it as your next reply in that conversation');
   });
 
   it('throws rather than guessing when the model never answers', async () => {

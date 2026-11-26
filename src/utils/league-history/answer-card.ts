@@ -9,8 +9,9 @@
  * which is a better thing to use for sharing". A tall card fills a phone
  * chat's column; a 1.91:1 one is a strip.
  *
- * What it draws is the saved answer only (ask-store.ts) — the question, the
- * headline stat, the answer in words — so the endpoint cannot be used to draw
+ * What it draws is the saved answer only (ask-store.ts) — the question (and,
+ * for a follow-up, the question its conversation started with), the headline
+ * stat, the answer in words, its chart as a few bars — so the endpoint cannot be used to draw
  * arbitrary text. The asker's name is never on it. Always dark, so it reads
  * the same in every chat client. The footer invites the reader to ask their
  * own, which is the point of sharing it.
@@ -42,6 +43,43 @@ export interface AnswerCardInput {
 	logos?: string[];
 	/** Where to ask your own, shown in the footer: "theleague.us/history/ask". */
 	askAt: string;
+	/**
+	 * A follow-up's conversation opener, drawn above the question so the
+	 * picture never lands in the chat without its context (Brandon,
+	 * 2026-11-26: "first question + latest answer").
+	 */
+	context?: string | null;
+	/** The answer's chart as plain bars (cardBars), drawn under the answer. */
+	bars?: CardBar[];
+}
+
+export interface CardBar {
+	name: string;
+	display: string;
+	/** 0..1 of the longest bar. */
+	share: number;
+}
+
+/** Most bars the card draws; past this they crowd the answer. */
+export const MAX_CARD_BARS = 5;
+
+/**
+ * The answer's Record Book chart as a few plain bars for the card: its top
+ * rows, longest bar = the largest value. Only the ranking chart: a stacked,
+ * career or what-if chart does not survive being flattened, so the card
+ * shows none rather than a wrong one.
+ */
+export function cardBars(chart: { kind?: string; rows?: Array<{ value: number; display: string; name: string; context?: string }> } | null | undefined): CardBar[] {
+	if (!chart || chart.kind || !Array.isArray(chart.rows)) return [];
+	const rows = chart.rows.filter((r) => Number.isFinite(r?.value)).slice(0, MAX_CARD_BARS);
+	if (rows.length < 2) return [];
+	const max = Math.max(...rows.map((r) => Math.abs(r.value)));
+	if (!(max > 0)) return [];
+	return rows.map((r) => ({
+		name: clipWords(r.context ? `${r.name} · ${r.context}` : r.name, 34),
+		display: clipWords(String(r.display ?? r.value), 12),
+		share: Math.max(0.04, Math.abs(r.value) / max),
+	}));
 }
 
 const INK = '#0f1115';
@@ -137,8 +175,31 @@ export function buildAnswerCardTree(input: AnswerCardInput): Node {
 	const head = input.headline;
 	// With a headline the answer is the supporting line; without one it IS the
 	// card, so it gets the room and the bigger type.
-	const answer = clipWords(input.answer, head ? 260 : 360);
+	const bars = (input.bars ?? []).slice(0, MAX_CARD_BARS);
+	const context = input.context ? clipWords(input.context, 90) : '';
+	// Bars and a conversation opener take room from the answer's words.
+	const room = (bars.length ? 110 : 0) + (context ? 40 : 0);
+	const answer = clipWords(input.answer, (head ? 260 : 360) - room);
 	const answerSize = head ? 36 : answer.length > 220 ? 44 : 52;
+	const barRows: Node[] = bars.length
+		? [
+				el(
+					'div',
+					{ display: 'flex', flexDirection: 'column', marginTop: 40 },
+					bars.map((b, i) =>
+						el('div', { display: 'flex', flexDirection: 'column', marginTop: i ? 16 : 0 }, [
+							el('div', { display: 'flex', justifyContent: 'space-between', fontSize: 28, color: MUTED, marginBottom: 6 }, [
+								el('div', { display: 'flex' }, b.name),
+								el('div', { display: 'flex', color: '#ffffff', fontWeight: 700 }, b.display),
+							]),
+							el('div', { display: 'flex', width: '100%', height: 18, background: 'rgba(255,255,255,0.08)', borderRadius: 9 }, [
+								el('div', { display: 'flex', width: `${Math.round(b.share * 100)}%`, height: 18, background: i ? 'rgba(212,169,60,0.55)' : GOLD, borderRadius: 9 }),
+							]),
+						]),
+					),
+				),
+			]
+		: [];
 
 	const middle: Node[] = head
 		? [
@@ -153,11 +214,13 @@ export function buildAnswerCardTree(input: AnswerCardInput): Node {
 				]),
 				el('div', { display: 'flex', fontSize: 44, fontWeight: 500, color: GOLD, marginTop: 20, lineHeight: 1.2 }, clipWords(head.label, 70)),
 				el('div', { display: 'flex', fontSize: answerSize, lineHeight: 1.35, color: '#ffffff', marginTop: 44 }, answer),
+				...barRows,
 			]
 		: [
 				...tieRow,
 				...(logo ? [img(logo, 130, { marginBottom: 36 })] : []),
 				el('div', { display: 'flex', fontSize: answerSize, fontWeight: 500, lineHeight: 1.3, color: '#ffffff' }, answer),
+				...barRows,
 			];
 
 	return el(
@@ -180,11 +243,18 @@ export function buildAnswerCardTree(input: AnswerCardInput): Node {
 					el('div', { width: 64, height: 10, background: GOLD, borderRadius: 5, marginRight: 22 }),
 					el('div', { display: 'flex', fontFamily: 'UFC Sans Condensed', fontWeight: 700, fontSize: 46, color: GOLD, letterSpacing: '0.06em' }, 'ASK THE HISTORY'),
 				]),
-				el(
-					'div',
-					{ display: 'flex', fontSize: 40, lineHeight: 1.3, color: MUTED, marginTop: 56 },
-					`“${clipWords(input.question, 150)}”`,
-				),
+				...(context
+					? [
+							el('div', { display: 'flex', fontSize: 30, lineHeight: 1.3, color: MUTED, marginTop: 44 }, `It started with “${context}”`),
+							el('div', { display: 'flex', fontSize: 40, lineHeight: 1.3, color: '#ffffff', marginTop: 14 }, `Then: “${clipWords(input.question, 120)}”`),
+						]
+					: [
+							el(
+								'div',
+								{ display: 'flex', fontSize: 40, lineHeight: 1.3, color: MUTED, marginTop: 56 },
+								`“${clipWords(input.question, 150)}”`,
+							),
+						]),
 			]),
 			el('div', { display: 'flex', flexDirection: 'column' }, middle),
 			el('div', { display: 'flex', flexDirection: 'column', borderTop: '2px solid rgba(255,255,255,0.14)', paddingTop: 36 }, [

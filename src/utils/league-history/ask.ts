@@ -167,8 +167,24 @@ interface WhatIfFeeds {
 }
 
 interface AnthropicLike {
-  messages: { create: (body: Record<string, unknown>) => Promise<any> };
+  messages: {
+    create: (body: Record<string, unknown>) => Promise<any>;
+    /** The SDK's MessageStream (`streamEvent` + `finalMessage`); a test client may leave it out. */
+    stream?: (body: Record<string, unknown>) => {
+      on: (event: 'streamEvent', listener: (event: any, snapshot: any) => void) => unknown;
+      finalMessage: () => Promise<any>;
+    };
+  };
 }
+
+/**
+ * What a streamed ask reports while it works (the live chat, Brandon
+ * 2026-11-26: "it doesn't feel like someone is really answering me"):
+ * each lookup as it runs, then the answer as it is written. `answer` carries
+ * the WHOLE answer so far, never a delta, so a masked guest answer can be
+ * re-masked whole on every event.
+ */
+export type AskEvent = { type: 'step'; text: string } | { type: 'answer'; text: string };
 
 const MAX_ROUNDS = 8;
 
@@ -400,7 +416,7 @@ function conversationBlock(turns: AskTurn[]): string {
     (t, i) =>
       `<turn n="${i + 1}"><asked>${clip(t.question, 300)}</asked><answered>${clip(t.answer, 600)}</answered>${t.steps.length ? `<queries>${t.steps.map((d) => clip(d, 300)).join(' | ')}</queries>` : ''}</turn>`,
   );
-  return `<conversation>\nThe question below follows up on these earlier answers. Read "they", "them", "that team", "what about…" against them, and re-run the queries you need: an earlier answer is context, not a result you can quote numbers from.\n${lines.join('\n')}\n</conversation>\n\n`;
+  return `<conversation>\nThis is one conversation: the question below is the asker's next message after these earlier answers. Read "they", "them", "that team", "what about…" against them, and re-run the queries you need: an earlier answer is context, not a result you can quote numbers from. Answer it as your next reply in that conversation, the way a person would in a chat: pick up from what you just said (tie the new fact to the earlier one when it adds to it, contrasts with it or explains it) instead of restating the whole topic as if it were asked fresh, and never repeat an earlier answer's facts unless the new one changes them.\n${lines.join('\n')}\n</conversation>\n\n`;
 }
 
 /**
@@ -516,6 +532,73 @@ Renamed teams (owner: every name, with seasons): ${teamRenames(ds).join('; ') ||
 }
 
 /**
+ * The answer tool with eager input streaming, for a streamed ask: without it
+ * the API buffers the whole `answer` string and it arrives in one piece,
+ * which is exactly the wait the live chat is meant to remove. Only this tool:
+ * the query tools' inputs are small and are run only once complete.
+ */
+const STREAM_TOOLS = TOOLS.map((t) => (t.name === ANSWER_TOOL.name ? { ...t, eager_input_streaming: true } : t));
+
+/**
+ * The `answer` string so far inside the answer tool's raw, still-arriving
+ * JSON input, or null before it has started. Hand-read because the SDK's
+ * partial parser drops a string until its closing quote, which would show
+ * the answer only once it was finished. A quote inside a JSON string is
+ * always escaped, so a bare `"answer":` can only be the key itself.
+ */
+export function partialAnswer(json: string): string | null {
+  const key = /"answer"\s*:\s*"/.exec(json);
+  if (!key) return null;
+  let out = '';
+  for (let i = key.index + key[0].length; i < json.length; i++) {
+    const c = json[i];
+    if (c === '"') return out;
+    if (c !== '\\') {
+      out += c;
+      continue;
+    }
+    const next = json[i + 1];
+    if (next === undefined) return out; // an escape cut in half: wait for the rest
+    if (next === 'u') {
+      const hex = json.slice(i + 2, i + 6);
+      if (hex.length < 4) return out;
+      out += String.fromCharCode(parseInt(hex, 16));
+      i += 5;
+      continue;
+    }
+    out += ({ n: '\n', t: '\t', r: '', b: '', f: '' } as Record<string, string>)[next] ?? next;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * One streamed round: the same response `messages.create` returns, with the
+ * answer tool's `answer` reported as it is written. Plain text the model
+ * writes outside a tool is not streamed: it is usually a preamble before a
+ * query, and only becomes the answer when no tool follows.
+ */
+async function streamRound(anthropic: AnthropicLike, body: Record<string, unknown>, emit: (event: AskEvent) => void): Promise<any> {
+  const stream = anthropic.messages.stream!(body);
+  const answerBlocks = new Map<number, string>();
+  let shown = '';
+  stream.on('streamEvent', (event) => {
+    if (event?.type === 'content_block_start') {
+      if (event.content_block?.type === 'tool_use' && event.content_block.name === ANSWER_TOOL.name) answerBlocks.set(event.index, '');
+      return;
+    }
+    if (event?.type !== 'content_block_delta' || event.delta?.type !== 'input_json_delta' || !answerBlocks.has(event.index)) return;
+    const json = answerBlocks.get(event.index)! + String(event.delta.partial_json ?? '');
+    answerBlocks.set(event.index, json);
+    const text = partialAnswer(json);
+    if (text === null || text.length <= shown.length) return;
+    shown = text;
+    emit({ type: 'answer', text });
+  });
+  return stream.finalMessage();
+}
+
+/**
  * Answer one question from the league's history (and player) datasets.
  * Throws when the model is unavailable, so the endpoint can say so instead of
  * returning a guess.
@@ -530,7 +613,16 @@ export async function askHistory(
     asker = null,
     model = aiModelForLeague(leagueSlug),
     onUsage,
-  }: { client?: AnthropicLike; turns?: AskTurn[]; asker?: AskAsker | null; model?: string; onUsage?: (usage: AskUsage) => void } = {},
+    onEvent,
+  }: {
+    client?: AnthropicLike;
+    turns?: AskTurn[];
+    asker?: AskAsker | null;
+    model?: string;
+    onUsage?: (usage: AskUsage) => void;
+    /** Live progress; given, the model is streamed so the answer can be shown as it is written. */
+    onEvent?: (event: AskEvent) => void;
+  } = {},
 ): Promise<AskResult> {
   const tally = emptyUsage(model);
   const report = () => onUsage?.({ ...tally, costUsd: usageCost(tally) });
@@ -550,16 +642,24 @@ export async function askHistory(
     { role: 'user', content: `${askerBlock(asker)}${conversationBlock(turns)}<question>${question}</question>` },
   ];
 
+  const system = [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades, data.salaries), cache_control: { type: 'ephemeral' } }];
+  const streaming = Boolean(onEvent && anthropic.messages.stream);
+  const emit = (event: AskEvent) => {
+    try {
+      onEvent?.(event);
+    } catch {
+      // A closed browser connection must not cost the answer (it is still saved).
+    }
+  };
+
   for (let round = 0; round < MAX_ROUNDS; round++) {
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: 6000,
-      output_config: { effort: 'medium' },
-      system: [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades, data.salaries), cache_control: { type: 'ephemeral' } }],
-      tools: TOOLS,
-      messages,
-    });
+    const body = { model, max_tokens: 6000, output_config: { effort: 'medium' }, system, tools: streaming ? STREAM_TOOLS : TOOLS, messages };
+    const response = streaming ? await streamRound(anthropic, body, emit) : await anthropic.messages.create(body);
     addUsage(tally, response?.usage);
+    // A refusal can cut a tool call off mid-input, and so can max_tokens once
+    // the answer streams eagerly (the API no longer validates it): never run
+    // or keep that turn's tools.
+    if (response?.stop_reason === 'refusal' || response?.stop_reason === 'max_tokens') break;
 
     const uses: any[] = (response?.content ?? []).filter((b: any) => b?.type === 'tool_use');
     const final = uses.find((u) => u.name === ANSWER_TOOL.name);
@@ -618,6 +718,7 @@ export async function askHistory(
             });
             results.push(table as unknown as AskTable);
             steps.push(String(table.description));
+            emit({ type: 'step', text: String(table.description) });
             return reply({
               index: results.length - 1,
               description: table.description,
@@ -645,6 +746,7 @@ export async function askHistory(
           const { query: _q, ...table } = result;
           results.push(table as AskTable);
           steps.push(result.description);
+          emit({ type: 'step', text: result.description });
           return {
             type: 'tool_result',
             tool_use_id: use.id,

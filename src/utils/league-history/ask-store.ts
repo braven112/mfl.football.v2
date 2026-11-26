@@ -54,8 +54,8 @@ const ASKERS = (league: string, week: string, topic: string) => `history-ask:${l
 const TOPIC = (league: string, topic: string) => `history-ask:${league}:topic:${topic}`;
 const TTL_SECONDS = 365 * 24 * 60 * 60;
 const WEEK_TTL_SECONDS = 21 * 24 * 60 * 60;
-/** Earlier turns a follow-up carries: enough for "what about them?", short enough to stay cheap. */
-export const MAX_TURNS = 4;
+/** Earlier turns a follow-up carries: one chat's worth (Brandon, 2026-11-26: 10, up from 4), each answer clipped in the prompt so it stays cheap. */
+export const MAX_TURNS = 10;
 
 export const isAnswerId = (id: string) => /^[A-Za-z0-9_-]{10}$/.test(id);
 
@@ -74,6 +74,42 @@ export async function saveAnswer(answer: Omit<SavedAnswer, 'id' | 'createdAt'>):
  */
 export function turnsAfter(parent: SavedAnswer): AskTurn[] {
   return [...(parent.turns ?? []), { question: parent.question, answer: parent.answer, steps: parent.steps ?? [] }].slice(-MAX_TURNS);
+}
+
+/**
+ * The answers a saved answer followed up on, oldest first, read back through
+ * its `parent` links, so a shared link or a reopened chat shows the whole
+ * conversation, every chart included, instead of only the last follow-up
+ * (Brandon, 2026-11-26). At most MAX_TURNS; a link that has expired or left
+ * the league ends the walk, and the caller falls back to `saved.turns` (text
+ * only) for anything older.
+ */
+export async function loadConversation(saved: SavedAnswer): Promise<SavedAnswer[]> {
+  const chain: SavedAnswer[] = [];
+  const seen = new Set<string>([saved.id]);
+  let next = saved.parent ?? null;
+  while (next && chain.length < MAX_TURNS && !seen.has(next)) {
+    seen.add(next);
+    const parent = await readAnswer(saved.league, next).catch(() => null);
+    // A guest's chat never continues an owner's answer (the API enforces it); never show one in it either.
+    if (!parent || Boolean(parent.guest) !== Boolean(saved.guest)) break;
+    chain.unshift(parent);
+    next = parent.parent ?? null;
+  }
+  return chain;
+}
+
+/**
+ * One conversation's turns as the page draws them: every earlier answer it
+ * could read back in full, and the older ones it could not as text only.
+ */
+export type ConversationTurn = { full: SavedAnswer } | { text: AskTurn };
+
+export function conversationTurns(saved: SavedAnswer, chain: SavedAnswer[]): ConversationTurn[] {
+  const earlier = saved.turns ?? [];
+  // `turns` is the newest MAX_TURNS before `saved`; the chain covers the newest `chain.length` of them.
+  const textOnly = earlier.slice(0, Math.max(0, earlier.length - chain.length));
+  return [...textOnly.map((text) => ({ text })), ...chain.map((full) => ({ full }))];
 }
 
 /** What an answer is about (see the header): one key per Record Book board or query. */

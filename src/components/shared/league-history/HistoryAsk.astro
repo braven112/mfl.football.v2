@@ -1,11 +1,18 @@
 ---
 /**
- * Ask the History on the History home: the bar that opens the ask screen
- * (HistoryAskPage.astro), a few questions to start from, and "The league is
+ * Ask the History on the History home: the ask box, a few questions to start
+ * from, and "The league is
  * asking", this week's most-asked topics, each shown through its latest
  * answer (ask-store leagueIsAsking). What owners ask is what the home page
  * puts forward (Brandon, 2026-10-26): a topic counts each owner once, whether
  * they asked it or opened someone's link to it.
+ *
+ * For an owner who can ask, the box IS the chat (Brandon, 2026-11-26: typing
+ * "just opens up another page … it doesn't feel like someone is really
+ * answering me right where I was"): Buck answers right here, live, and the
+ * box stays under the latest answer for the next follow-up. Everyone else's
+ * box still opens the ask screen, which carries the sign-in and the public
+ * demo's question counter.
  */
 import '../../../styles/history-ask.css';
 import type { LeagueDefinition } from '../../../config/leagues';
@@ -13,6 +20,7 @@ import type { AskingTopic } from '../../../utils/league-history/ask-store';
 import { ASK_EXAMPLES } from '../../../utils/league-history/ask-format.mjs';
 import { answerTeam } from '../../../utils/league-history/ask-render';
 import { getAuthUser } from '../../../utils/auth';
+import { canAskLeagueHistory } from '../../../utils/league-history/access';
 
 interface Props {
   league: LeagueDefinition;
@@ -24,7 +32,9 @@ interface Props {
 const { league, base, asking = { week: 'this', topics: [] } } = Astro.props as Props;
 const askPage = `${base}/history/ask`;
 // "My team" means nothing to a signed-out visitor (the public demo asks as a guest).
-const examples = getAuthUser(Astro.request) ? ASK_EXAMPLES : ASK_EXAMPLES.filter((q) => !/\bmy\b/i.test(q));
+const authUser = getAuthUser(Astro.request);
+const examples = authUser ? ASK_EXAMPLES : ASK_EXAMPLES.filter((q) => !/\bmy\b/i.test(q));
+const inPlace = canAskLeagueHistory(authUser, league.id);
 const [hot, ...rest] = asking.topics;
 const most = Math.max(1, ...asking.topics.map((t) => t.owners));
 const owners = (n: number) => `${n} ${n === 1 ? 'owner' : 'owners'}`;
@@ -34,18 +44,41 @@ const teamStyle = (t: AskingTopic) => {
 };
 ---
 
-<section class="ha" aria-labelledby="ha-title">
+<section class="ha" aria-labelledby="ha-title" data-ha-chat={inPlace ? '' : undefined} data-league={league.slug} data-base={base}>
   <h2 class="visually-hidden" id="ha-title">Ask the History</h2>
-  <a class="ha-bar" href={askPage}>
-    <svg class="ha-bar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
-    <span class="ha-bar__text">Ask the History anything…</span>
-    <span class="ha-bar__go">Ask</span>
-  </a>
-  <ul class="ha__examples" aria-label={`Questions to ask about ${league.name}`}>
-    {examples.slice(0, 4).map((q) => (
-      <li><a class="ha__example" href={`${askPage}?q=${encodeURIComponent(q)}`}>{q}</a></li>
-    ))}
-  </ul>
+  {inPlace ? (
+    <>
+      <div class="ha-chat" data-ha-thread hidden aria-live="polite"></div>
+      <form class="ha-bar" data-ha-form>
+        <svg class="ha-bar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+        <label class="visually-hidden" for={`ha-q-${league.slug}`}>Ask the History</label>
+        <input id={`ha-q-${league.slug}`} class="ha-bar__input" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" placeholder="Ask the History anything…" required />
+        <button class="ha-bar__go" type="submit">Ask</button>
+      </form>
+      <p class="hask-status" data-ha-status role="status" aria-live="polite"></p>
+      <ul class="ha__examples" data-ha-chips aria-label={`Questions to ask about ${league.name}`}>
+        {examples.slice(0, 4).map((q) => (
+          <li><button class="ha__example" type="button" data-ha-suggest>{q}</button></li>
+        ))}
+      </ul>
+      <p class="ha-chat__foot" data-ha-foot hidden>
+        <a class="cta-link" data-ha-full href={askPage}>Open full screen</a>
+      </p>
+    </>
+  ) : (
+    <>
+      <a class="ha-bar" href={askPage}>
+        <svg class="ha-bar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+        <span class="ha-bar__text">Ask the History anything…</span>
+        <span class="ha-bar__go">Ask</span>
+      </a>
+      <ul class="ha__examples" aria-label={`Questions to ask about ${league.name}`}>
+        {examples.slice(0, 4).map((q) => (
+          <li><a class="ha__example" href={`${askPage}?q=${encodeURIComponent(q)}`}>{q}</a></li>
+        ))}
+      </ul>
+    </>
+  )}
 
   {hot && (
     <div class="ha-asking">
@@ -94,3 +127,100 @@ const teamStyle = (t: AskingTopic) => {
     </div>
   )}
 </section>
+
+<script>
+  import { renderAnswer } from '../../../utils/league-history/ask-render';
+  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+  import { chatTurn } from '../../../utils/league-history/ask-live';
+
+  /** The follow-ups Buck suggests take the starter questions' place under the box. */
+  function setChips(root: HTMLElement, questions: string[]) {
+    const list = root.querySelector<HTMLElement>('[data-ha-chips]');
+    if (!list || !questions.length) return;
+    list.setAttribute('aria-label', 'Suggested follow-ups');
+    list.replaceChildren(
+      ...questions.map((q) => {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.className = 'ha__example';
+        b.type = 'button';
+        b.dataset.haSuggest = '';
+        b.textContent = q;
+        li.append(b);
+        return li;
+      }),
+    );
+  }
+
+  async function ask(root: HTMLElement, question: string): Promise<boolean> {
+    const thread = root.querySelector<HTMLElement>('[data-ha-thread]');
+    const status = root.querySelector<HTMLElement>('[data-ha-status]');
+    if (!thread || root.dataset.busy) return false;
+    root.dataset.busy = 'true';
+    if (status) status.textContent = '';
+    thread.hidden = false;
+    const n = Number(root.dataset.turns ?? '0');
+    if (n === 0) root.dataset.firstQuestion = question;
+    try {
+      const outcome = await chatTurn(
+        {
+          thread,
+          league: root.dataset.league ?? '',
+          base: root.dataset.base ?? '',
+          question,
+          after: root.dataset.after ?? '',
+          turns: n,
+          firstQuestion: root.dataset.firstQuestion ?? question,
+        },
+        renderAnswer,
+      );
+      if (!outcome.ok) {
+        if (status) status.textContent = outcome.error;
+        if (n === 0) thread.hidden = true;
+        return false;
+      }
+      root.dataset.turns = String(n + 1);
+      const id = outcome.data.id;
+      if (id) {
+        root.dataset.after = id;
+        void prefetchCard({ league: root.dataset.league ?? '', id });
+        const full = root.querySelector<HTMLAnchorElement>('[data-ha-full]');
+        if (full) full.href = `${root.dataset.base ?? ''}/history/ask?after=${encodeURIComponent(id)}`;
+        root.querySelector<HTMLElement>('[data-ha-foot]')?.removeAttribute('hidden');
+      }
+      setChips(root, outcome.data.followUps ?? []);
+      const input = root.querySelector<HTMLInputElement>('.ha-bar__input');
+      if (input) input.placeholder = 'Ask a follow-up…';
+      return true;
+    } finally {
+      delete root.dataset.busy;
+    }
+  }
+
+  function init() {
+    // A fresh page each navigation (the section is swapped), so the flag is per page.
+    const root = document.querySelector<HTMLElement>('[data-ha-chat]');
+    if (!root || root.dataset.init) return;
+    root.dataset.init = 'true';
+    const form = root.querySelector<HTMLFormElement>('[data-ha-form]');
+    const input = form?.querySelector<HTMLInputElement>('input');
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const q = input?.value.trim() ?? '';
+      if (!q || !input || q.length < 5) return;
+      input.value = '';
+      if (!(await ask(root, q))) input.value = q;
+    });
+    root.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement;
+      const chip = target.closest<HTMLButtonElement>('[data-ha-suggest]');
+      if (chip && !chip.disabled) return void ask(root, chip.textContent?.trim() ?? '');
+      const share = target.closest<HTMLButtonElement>('[data-hask-share]');
+      if (!share?.dataset.id) return;
+      const outcome = await shareAnswer({ league: root.dataset.league ?? '', base: root.dataset.base ?? '', id: share.dataset.id, question: share.dataset.question ?? '' });
+      if (outcome === 'copied') share.textContent = 'Link copied';
+    });
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
