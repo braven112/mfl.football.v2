@@ -44,18 +44,19 @@ describe('after-kickoff injury copy', () => {
   const pools = [...INJURY_TEMPLATES_LOCKED_BREAKING, ...INJURY_TEMPLATES_LOCKED_STANDARD];
 
   // Brandon, 2026-11-26: once his game has started nobody can change a
-  // lineup for him, so the post must never tell managers to do so.
+  // lineup for him, so the post must never tell managers to do so, and it
+  // reports the injury rather than restating that his points stop here.
   it.each(['in', 'post'])('never asks for a lineup change (%s)', (gameState) => {
     for (const t of pools) {
       const body = t({ ...injury, gameState });
-      expect(body).not.toMatch(/adjust accordingly|plan b|new plan|monitor through the week|by game day|counting on him this week/i);
+      expect(body).not.toMatch(/adjust|lineup|plan b|new plan|monitor through the week|by game day|counting on him|put up|what counts|points/i);
       expect(body).toContain('Colston Loveland');
     }
   });
 
   it('says the change came during the game while it is in progress', () => {
     expect(INJURY_TEMPLATES_LOCKED_BREAKING[0]({ ...injury, gameState: 'in' })).toContain(
-      'has been ruled out during his game',
+      'has been ruled out during his game (shoulder)',
     );
   });
 });

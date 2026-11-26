@@ -60,22 +60,27 @@ function when(p) {
   return p.gameState === 'in' ? 'during his game' : 'after his game';
 }
 
-function detailSentence(p) {
-  return p.detail ? ` Dealing with ${p.detail.toLowerCase()}.` : '';
+/** " (shoulder)" when ESPN names the injury, else nothing. */
+function injuryTag(p) {
+  return p.detail ? ` (${p.detail.toLowerCase()})` : '';
 }
 
 /**
- * Doc's copy once the player's game has kicked off. None of these may tell a
- * manager to change a lineup this week (tests/injury-game-state.test.ts).
- * Each template takes the injury plus `gameState` ('in' | 'post').
+ * Doc's copy once the player's game has kicked off. It reports the INJURY:
+ * no lineup advice (nobody can make a move) and no "his points so far are
+ * what counts" filler, which states the obvious (Brandon, 2026-11-26).
+ * tests/injury-game-state.test.ts pins both. Each template takes the injury
+ * plus `gameState` ('in' | 'post').
  */
 export const INJURY_TEMPLATES_LOCKED_BREAKING = [
-  (p) => `${p.name} (${p.nflTeam}) has been ${ruled(p)} ${when(p)}.${detailSentence(p)} Lineups locked at kickoff, so whatever he put up is what counts this week.`,
-  (p) => `Update from the sideline: ${p.name} (${p.position}, ${p.nflTeam}) has been ${ruled(p)} ${when(p)}.${detailSentence(p)} It's too late to change lineups for him this week. His status for next week is the one to watch.`,
-  (p) => `${p.name} (${p.nflTeam}) → ${p.status} ${when(p)}.${detailSentence(p)} No lineup moves left to make, since his game had already kicked off. Next week is the question now.`,
+  (p) => `${p.name} (${p.nflTeam}) has been ${ruled(p)} ${when(p)}${injuryTag(p)}. Next up is word on how serious it is.`,
+  (p) => `Injury update: ${p.name} (${p.position}, ${p.nflTeam}) has been ${ruled(p)} ${when(p)}${injuryTag(p)}. His status for next week is now the question.`,
+  (p) => `Bad news from the sideline: ${p.name} (${p.nflTeam}) ${p.gameState === 'in' && String(p.status).toLowerCase() === 'out' ? "won't return" : `has been ${ruled(p)} ${when(p)}`}${injuryTag(p)}. Watch for an update on how much time he could miss.`,
 ];
 
 export const INJURY_TEMPLATES_LOCKED_STANDARD = [
-  (p) => `${p.name} (${p.position}, ${p.nflTeam}) is now ${p.status} ${when(p)}.${detailSentence(p)} Lineups are already locked for him, so all managers can do is watch.`,
-  (p) => `Status change for ${p.name} (${p.nflTeam}) ${when(p)}: now ${p.status}.${detailSentence(p)} Too late for lineup moves this week. Keep an eye on next week's practice reports.`,
+  (p) => p.gameState === 'in'
+    ? `${p.name} (${p.position}, ${p.nflTeam}) is ${String(p.status).toLowerCase()} to return${injuryTag(p)}.`
+    : `${p.name} (${p.position}, ${p.nflTeam}) is listed as ${p.status} after his game${injuryTag(p)}. Keep an eye on next week's practice reports.`,
+  (p) => `Injury update: ${p.name} (${p.nflTeam}) is now ${p.status} ${when(p)}${injuryTag(p)}. More to come on how serious it is.`,
 ];
