@@ -139,7 +139,7 @@ const teamStyle = (t: AskingTopic) => {
 
 <script>
   import { renderAnswer } from '../../../utils/league-history/ask-render';
-  import { prefetchCard, shareAnswer } from '../../../utils/league-history/share-answer';
+  import { shareAnswer } from '../../../utils/league-history/share-answer';
   import { chatTurn } from '../../../utils/league-history/ask-live';
 
   /** The follow-ups Buck suggests take the starter questions' place under the box. */
@@ -205,7 +205,6 @@ const teamStyle = (t: AskingTopic) => {
       const id = outcome.data.id;
       if (id) {
         root.dataset.after = id;
-        void prefetchCard({ league: root.dataset.league ?? '', id });
         const full = root.querySelector<HTMLAnchorElement>('[data-ha-full]');
         if (full) full.href = `${root.dataset.base ?? ''}/history/ask?after=${encodeURIComponent(id)}`;
         root.querySelector<HTMLElement>('[data-ha-foot]')?.removeAttribute('hidden');

@@ -1,14 +1,15 @@
 /**
  * Share one saved Ask the History answer into a group chat (GroupMe, mostly)
- * from the phone's share sheet. Client-side; used by the ask screen and the
- * shared answer page.
+ * from the phone's share sheet. Client-side; used by the ask screen, the live
+ * chat on the History home and the shared answer page.
  *
- * The phone gets the portrait answer card as a PICTURE plus a line of text
- * that ends in the answer's link, so the chat shows the fact at full size and
- * a leaguemate can tap through to ask their own (Brandon, 2026-11-12: share
- * sheet, posted by the owner themself, portrait card). Where the browser
- * cannot share files it shares the link alone, whose unfurl is the same card
- * (the page's og:image); with no share sheet at all it copies the link.
+ * What goes out is a LINK to the answer page, which shows the whole
+ * conversation from the first question down (Brandon, 2026-11-26: "share a
+ * link to the site so they can see the full question and answer directly on
+ * the site"). The picture rides along as the link's unfurl (the page's
+ * og:image is the portrait answer card), never as an attached file: Android
+ * drops the text when a share carries a file, so GroupMe got the picture and
+ * no link at all. With no share sheet it copies the link.
  *
  * The link is the LAST thing in the text, with nothing after it: GroupMe
  * autolinks trailing punctuation into the URL (docs/claude/rules/league-urls.md).
@@ -27,41 +28,10 @@ export type ShareOutcome = 'shared' | 'copied' | 'dismissed' | 'failed';
 export const answerPageUrl = (a: ShareableAnswer, origin: string) =>
   new URL(`${a.base}/history/ask/${encodeURIComponent(a.id)}`, origin).toString();
 
-export const answerCardUrl = (a: Pick<ShareableAnswer, 'league' | 'id'>, origin: string) =>
-  new URL(`/api/og/league-history/answer.png?league=${encodeURIComponent(a.league)}&id=${encodeURIComponent(a.id)}`, origin).toString();
-
-/** The text that goes with the picture: the question, then the link, and nothing after the link. */
+/** The shared text: the question, then the link, and nothing after the link. */
 export function shareText(question: string, url: string): string {
   const q = question.replace(/\s+/g, ' ').trim();
-  return `${q ? `“${q}” ` : ''}Ask the History has the answer. Ask your own: ${url}`;
-}
-
-const cards = new Map<string, Promise<File | null>>();
-
-/**
- * Fetch the card ahead of the tap. A share sheet must open while the tap still
- * counts as the user's gesture, and Safari stops counting after a slow fetch,
- * so the button warms its card when it is drawn and the tap only awaits a
- * promise that has already settled.
- */
-export function prefetchCard(a: Pick<ShareableAnswer, 'league' | 'id'>): Promise<File | null> {
-  const key = `${a.league}:${a.id}`;
-  let card = cards.get(key);
-  if (!card) {
-    card = loadCard(a);
-    cards.set(key, card);
-  }
-  return card;
-}
-
-async function loadCard(a: Pick<ShareableAnswer, 'league' | 'id'>): Promise<File | null> {
-  try {
-    const res = await fetch(answerCardUrl(a, location.origin));
-    if (!res.ok) return null;
-    return new File([await res.blob()], `ask-the-history-${a.id}.png`, { type: 'image/png' });
-  } catch {
-    return null;
-  }
+  return `${q ? `“${q}” ` : ''}See the full answer on the site: ${url}`;
 }
 
 export async function shareAnswer(a: ShareableAnswer): Promise<ShareOutcome> {
@@ -69,12 +39,9 @@ export async function shareAnswer(a: ShareableAnswer): Promise<ShareOutcome> {
   const text = shareText(a.question, url);
   try {
     if (navigator.share) {
-      const file = await prefetchCard(a);
-      if (file && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text, title: 'Ask the History' });
-      } else {
-        await navigator.share({ title: 'Ask the History', text, url });
-      }
+      // The URL lives inside `text`, and no `url` field is passed: Android
+      // appends `url` to the text, which would post the link twice.
+      await navigator.share({ title: 'Ask the History', text });
       return 'shared';
     }
     await navigator.clipboard.writeText(url);
