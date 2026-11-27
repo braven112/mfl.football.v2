@@ -4,6 +4,10 @@ import { updateFranchiseLinks } from './features/franchiseLinks.js';
 import { initializeTeamPreferences } from './shared/teamPreferences.js';
 import { initMflPageEnhancements } from './shared/mflPageEnhancements.js';
 import { initNavProgress } from './shared/navProgress.js';
+import { initBlockFullScreenAds } from './shared/blockFullScreenAds.js';
+
+// Before DOMContentLoaded: the full-screen ad can fire on the very first tap.
+initBlockFullScreenAds();
 
 const revealFranchiseIcons = (scope = document) => {
   if (!scope) return;

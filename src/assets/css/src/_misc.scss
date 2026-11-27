@@ -299,7 +299,20 @@ span#chat_audio_clip {
   display: none;
 }
 //remove mfl ads
-div[id*="usmg_ad"]{display:none} 
+div[id*="usmg_ad"]{display:none}
+
+// Full-screen "vignette" / interstitial ads (Google AdSense + Ad Manager).
+// Hidden here so they never paint; src/scripts/shared/blockFullScreenAds.js
+// finishes the tap the ad was holding, so the owner never lands on a dead page.
+ins.adsbygoogle[data-vignette-loaded],
+ins.adsbygoogle[data-ad-format="interstitial"],
+ins[id^="gpt_unit_"][id*="_oop"],
+div[id^="google_ads_iframe"][id*="nterstitial"],
+div[id*="google_vignette"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
 
 body {
   font-family: $body-font;
