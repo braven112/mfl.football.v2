@@ -274,7 +274,8 @@ export const SCHEFTER_ARTICLE_SLOTS: readonly SchefterArticleSlot[] = [
   // Buck's Notebook: Tuesday, after the Pecking Order (Brandon, 2026-11-16).
   { type: 'history-notebook', weekday: 2, hour: 9, minute: 0 },
   { type: 'schedule-strength', weekday: 3, hour: 9, minute: 0 },
-  { type: 'waiver-pickups', weekday: 3, hour: 22, minute: 0 },
+  // waiver-pickups: off the schedule (Brandon, 2026-11-26). The AI waiver
+  // article is retired; the code-written waiver-wire list replaces it (PR #1826).
   { type: 'matchup-preview', weekday: 6, hour: 11, minute: 0 },
   { type: 'cut-watch', weekday: 0, hour: 8, minute: 0 },
   { type: 'schedule-release', weekday: null, hour: 11, minute: 30 },
