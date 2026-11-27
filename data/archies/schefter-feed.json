@@ -2,20 +2,54 @@
   "$comment": "Archie's Fantasy Football League news feed. Starts empty; the weekly Gauntlet column is the first thing written here.",
   "posts": [
     {
+      "id": "sf_notebook_archies_20261127",
+      "timestamp": "2026-11-27T17:29:55.000Z",
+      "type": "transaction",
+      "transactionSubType": "NOTEBOOK",
+      "format": "notebook",
+      "tier": "minor",
+      "headline": "Around the league: Nov 27 notebook",
+      "body": "Notes from around the league today:\n- Scorpions grab WR, Brian Thomas Jr.",
+      "franchiseIds": [
+        "0067"
+      ],
+      "playerIds": [
+        "16618"
+      ],
+      "sourceTimestamp": "1795800595",
+      "items": [
+        {
+          "sourceTimestamp": "1795800595",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Scorpions grab WR, Brian Thomas Jr.",
+          "franchiseIds": [
+            "0067"
+          ],
+          "playerIds": [
+            "16618"
+          ]
+        }
+      ],
+      "league": "archies"
+    },
+    {
       "id": "sf_notebook_archies_20261126",
-      "timestamp": "2026-11-26T20:27:42.000Z",
+      "timestamp": "2026-11-27T03:53:24.000Z",
       "type": "transaction",
       "transactionSubType": "NOTEBOOK",
       "format": "notebook",
       "tier": "minor",
       "headline": "Around the league: Nov 26 notebook",
-      "body": "Notes from around the league today:\n- Apes grab the Washington Commanders defense\n- Apes add WR, KC Concepcion\n- Eagles pick up the New England Patriots defense\n- Razerbacks claim WR, Jakobi Meyers\n- Roos sign TE, Juwan Johnson\n- Rafters pick up TE, Dallas Goedert",
+      "body": "Notes from around the league today:\n- Apes grab the Washington Commanders defense\n- Apes add WR, KC Concepcion\n- Eagles pick up the New England Patriots defense\n- Razerbacks claim WR, Jakobi Meyers\n- Roos sign TE, Juwan Johnson\n- Rafters pick up TE, Dallas Goedert\n- Twisters pick up QB, Kyle McCord\n- SnakeEyes add QB, Mac Jones\n- Geese sign QB, Mason Rudolph",
       "franchiseIds": [
         "0016",
         "0010",
         "0020",
         "0045",
-        "0098"
+        "0098",
+        "0007",
+        "0038",
+        "0025"
       ],
       "playerIds": [
         "0520",
@@ -23,9 +57,12 @@
         "0504",
         "14127",
         "14861",
-        "13674"
+        "13674",
+        "17038",
+        "15241",
+        "13595"
       ],
-      "sourceTimestamp": "1795724862",
+      "sourceTimestamp": "1795751604",
       "items": [
         {
           "sourceTimestamp": "1795694063",
@@ -91,6 +128,39 @@
           ],
           "playerIds": [
             "13674"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795729457",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Twisters pick up QB, Kyle McCord",
+          "franchiseIds": [
+            "0007"
+          ],
+          "playerIds": [
+            "17038"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795736296",
+          "transactionSubType": "FREE_AGENT",
+          "line": "SnakeEyes add QB, Mac Jones",
+          "franchiseIds": [
+            "0038"
+          ],
+          "playerIds": [
+            "15241"
+          ]
+        },
+        {
+          "sourceTimestamp": "1795751604",
+          "transactionSubType": "FREE_AGENT",
+          "line": "Geese sign QB, Mason Rudolph",
+          "franchiseIds": [
+            "0025"
+          ],
+          "playerIds": [
+            "13595"
           ]
         }
       ],
@@ -13217,6 +13287,6 @@
       }
     }
   ],
-  "lastScanTimestamp": "2026-11-26T20:37:51.774Z",
-  "lastProcessedMflTimestamp": "1795724862"
+  "lastScanTimestamp": "2026-11-27T18:04:17.658Z",
+  "lastProcessedMflTimestamp": "1795800595"
 }
