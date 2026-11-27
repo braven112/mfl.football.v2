@@ -104,3 +104,50 @@ describe('skin CSS', () => {
     expect(css).toContain('ins.adsbygoogle[data-vignette-loaded]');
   });
 });
+
+describe('banner ad shield', () => {
+  function el(text = '', children: any[] = [], parent: any = null) {
+    const node: any = {
+      attrs: {} as Record<string, string>,
+      children,
+      parentElement: parent,
+      get textContent() { return text + children.map((c: any) => c.textContent).join(''); },
+      setAttribute(n: string, v: string) { this.attrs[n] = v; },
+      hasAttribute(n: string) { return n in this.attrs; },
+    };
+    children.forEach((c) => { c.parentElement = node; });
+    return node;
+  }
+
+  it('hides the slot and the empty band around it, but not the page', async () => {
+    const slot = el('Advertisement');
+    const band = el('', [slot]);
+    const card = el('Pacific Pigskins', [band, el('VIT 69.39')]);
+    const body = el('', [card]);
+    const docStub: any = {
+      body: Object.assign(body, { style: { marginBottom: '12vh' } }),
+      documentElement: {},
+      querySelectorAll: () => [slot],
+      querySelector: () => null,
+      addEventListener: () => {},
+    };
+    vi.resetModules();
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('document', docStub);
+    vi.stubGlobal('requestAnimationFrame', (fn: () => void) => fn());
+    vi.stubGlobal('MutationObserver', class { observe() {} });
+    const mod = await import('../src/scripts/shared/blockBannerAds.js');
+    mod.initBlockBannerAds();
+    expect('data-mfl-ad-hidden' in slot.attrs).toBe(true);
+    expect('data-mfl-ad-hidden' in band.attrs).toBe(true);
+    expect('data-mfl-ad-hidden' in card.attrs).toBe(false);
+    expect(docStub.body.style.marginBottom).toBe('');
+  });
+
+  it('hides every Freestar placement MFL serves, in the skin CSS', () => {
+    const css = readFileSync('src/assets/css/src/_misc.scss', 'utf8');
+    for (const sel of ['[data-freestar-ad]', '#fs-sticky-footer', 'myfantasyleague_leaderboard', 'myfantasyleague_stickyfooter', '[data-mfl-ad-hidden]']) {
+      expect(css).toContain(sel);
+    }
+  });
+});
