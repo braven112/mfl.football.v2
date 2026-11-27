@@ -77,6 +77,36 @@ function leagueRegistry(league = 'theleague') {
 }
 
 /**
+ * The league's transactions, read LIVE from MFL.
+ *
+ * The committed `mfl-feeds/<year>/transactions.json` is not a current copy:
+ * the roster sync publishes through the live league-data pointer and holds
+ * changed store files out of its commit (docs/claude/rules/storage-and-build.md
+ * § "The roster sync publishes through the pointer"). On 2026-11-25 the git
+ * copy's newest row was six days old, so the Wednesday waiver column read a
+ * week with no waiver run in it and published "Zero claims, zero dollars"
+ * three hours after the scanner had posted a $725K claim from the same run.
+ *
+ * MFL answers errors as HTTP 200, so a body without `transactions` is a
+ * failure, not an empty league. Throws; the caller decides the fallback.
+ * @param {string} league registry slug
+ * @param {number} year league year of the feed directory being read
+ * @param {{ fetchImpl?: typeof fetch }} [opts]
+ */
+export async function fetchLiveTransactions(league, year, { fetchImpl = fetch } = {}) {
+  const reg = leagueRegistry(league);
+  const url = `https://${reg.mflHost}/${year}/export?TYPE=transactions&L=${reg.id}&JSON=1`;
+  const res = await fetchImpl(url);
+  if (!res.ok) throw new Error(`MFL transactions export returned ${res.status}`);
+  const body = await res.json();
+  if (!body || typeof body !== 'object' || !body.transactions) {
+    throw new Error(`MFL transactions export carried no transactions: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+  const rows = body.transactions.transaction ?? [];
+  return { transactions: { transaction: Array.isArray(rows) ? rows : [rows] } };
+}
+
+/**
  * Resolve the main repo data directory (handles worktree paths).
  * When running from .claude/worktrees/*, we read from main repo data/.
  */

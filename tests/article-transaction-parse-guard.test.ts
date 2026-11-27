@@ -44,12 +44,17 @@ describe('waiver article transaction parsing', () => {
 
   const sheetFor = async (transactions: Array<Record<string, string>>, league = 'theleague') => {
     const now = Math.floor(Date.now() / 1000);
-    const { factSheet, enrichment } = await buildFactSheet(
+    const result = await buildFactSheet(
       {
         players,
         transactions: {
           transactions: {
-            transaction: transactions.map((t) => ({ timestamp: String(now - 3600), ...t })),
+            // Every fixture week has its waiver run two hours ago, so the
+            // rows an hour ago are the FCFS adds and claims around it.
+            transaction: [
+              { type: 'BBID_AUTO_PROCESS_WAIVERS', timestamp: String(now - 7200) },
+              ...transactions.map((t) => ({ timestamp: String(now - 3600), ...t })),
+            ],
           },
         },
         league: {},
@@ -59,6 +64,9 @@ describe('waiver article transaction parsing', () => {
       ROOT,
       { league },
     );
+    // Every fixture week has a waiver run, so the column never declines here.
+    if (!result) throw new Error('waiver column declined a week that has a waiver run');
+    const { factSheet, enrichment } = result;
     return { factSheet, enrichment };
   };
 
@@ -86,7 +94,7 @@ describe('waiver article transaction parsing', () => {
       { type: 'FREE_AGENT', franchise: '0008', transaction: '|15749,' },
     ]);
     expect(factSheet).toContain('No waiver claims or free agent pickups this week.');
-    expect(factSheet).toContain('Total claims this week: 0');
+    expect(factSheet).toContain('Total pickups this week: 0');
     expect(factSheet).not.toContain('Isiah Pacheco');
   });
 
@@ -96,7 +104,7 @@ describe('waiver article transaction parsing', () => {
       { type: 'FREE_AGENT', franchise: '0008', transaction: '|15749,' },
       { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
     ]);
-    expect(factSheet).toContain('Total claims this week: 2');
+    expect(factSheet).toContain('Total pickups this week: 2');
     // The FCFS add signs at the $425K league minimum, so it counts too.
     expect(factSheet).toContain('Total spent: $1.20M');
   });
@@ -117,7 +125,7 @@ describe('waiver article transaction parsing', () => {
     const { factSheet } = await sheetFor([
       { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
     ]);
-    expect(factSheet).toContain('PK Trey Smack ($425K) [FCFS');
+    expect(factSheet).toContain('PK Trey Smack ($425K) [first-come-first-served add right after the waiver run');
     expect(factSheet).toContain('No pickup is free.');
     expect(factSheet).not.toContain('($0)');
     // The minimum is a salary, not a bid — it never wins "highest single bid".
@@ -129,7 +137,8 @@ describe('waiver article transaction parsing', () => {
       [{ type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' }],
       'afl-fantasy',
     );
-    expect(factSheet).toContain('PK Trey Smack ($0) [FA]');
+    expect(factSheet).toContain('PK Trey Smack [first-come-first-served add right after the waiver run]');
+    expect(factSheet).not.toContain('$0');
     expect(factSheet).not.toContain('league-minimum');
   });
 
@@ -157,7 +166,7 @@ describe('waiver article transaction parsing', () => {
       // The free add still reports; the unreadable claim does not appear at $0.
       expect(factSheet).toContain('Trey Smack');
       expect(factSheet).not.toContain('Kendre Miller');
-      expect(factSheet).toContain('Total claims this week: 1');
+      expect(factSheet).toContain('Total pickups this week: 1');
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();
@@ -178,7 +187,7 @@ describe('waiver article transaction parsing', () => {
         { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
       ]);
       expect(warn).toHaveBeenCalled();
-      expect(factSheet).toContain('Total claims this week: 1');
+      expect(factSheet).toContain('Total pickups this week: 1');
       expect(factSheet).toContain('Trey Smack');
     } finally {
       warn.mockRestore();
@@ -203,7 +212,7 @@ describe('waiver article transaction parsing', () => {
     const { factSheet } = await sheetFor([
       { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|775000|' },
     ]);
-    expect(factSheet).toContain('(1 claim,');
+    expect(factSheet).toContain('(1 pickup,');
     expect(factSheet).not.toContain('(1 claims,');
   });
 
@@ -212,7 +221,7 @@ describe('waiver article transaction parsing', () => {
       { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|775000|' },
       { type: 'FREE_AGENT', franchise: '0015', transaction: '17668,|' },
     ]);
-    expect(factSheet).toContain('(2 claims,');
+    expect(factSheet).toContain('(2 pickups,');
   });
 
   it('never prints a blank highest-bid line on an all-free-agent week', async () => {
@@ -244,7 +253,7 @@ describe('waiver article transaction parsing', () => {
     ]);
     // sortedTeams is ordered by SPEND, so [0] is the top spender; reading its
     // claim count called a one-bid team the week's busiest.
-    expect(factSheet).toMatch(/Most claims: .* \(2\)/);
+    expect(factSheet).toMatch(/Most pickups: .* \(2\)/);
   });
 });
 

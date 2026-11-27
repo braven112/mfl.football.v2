@@ -147,3 +147,27 @@ export async function appendToFeed(feedPath, post) {
   await fs.writeFile(feedPath, JSON.stringify(feed, null, 2) + '\n');
   return true;
 }
+
+/**
+ * Replace an already-published post IN PLACE, same id, for a deliberate
+ * re-run of a column that went out wrong (`schefter-weekly-articles --week N
+ * --replace`). The first use: TheLeague's Week 11 waiver recap, which read a
+ * stale transactions copy and said "zero claims" on a week with a $725K claim.
+ *
+ * Only a post still in the LIVE feed can be replaced; an archived one throws
+ * rather than publishing a second copy. `storyVersion` is bumped because
+ * mergeFeed keeps the higher version for the same id, so a scan that checked
+ * out before this write cannot push the wrong text back over it.
+ */
+export async function replaceInFeed(feedPath, post) {
+  const feed = JSON.parse(await fs.readFile(feedPath, 'utf8'));
+  const i = (feed.posts ?? []).findIndex((p) => p?.id === post.id);
+  if (i < 0) throw new Error(`Post ${post.id} is not in the live feed; nothing to replace.`);
+  const league = LEAGUES[post.league] ? post.league : leagueForFeedFile(feedPath);
+  if (league) scrubPostLeagueNames(post, league);
+  const prior = feed.posts[i];
+  feed.posts[i] = { ...post, storyVersion: (Number(prior.storyVersion) || 0) + 1 };
+  feed.lastScanTimestamp = new Date().toISOString();
+  await fs.writeFile(feedPath, JSON.stringify(feed, null, 2) + '\n');
+  return true;
+}

@@ -12,7 +12,7 @@
  *   node scripts/schefter-weekly-articles.mjs --type waiver-pickups [--week 3] [--year 2026] [--dry-run]
  *
  * Article types:
- *   waiver-pickups      BBID waiver claims (Wednesday)
+ *   waiver-pickups      waiver run + FCFS pickups around it (Thursday morning)
  *   weekend-preview     Upcoming NFL weekend (Friday)
  *   matchup-preview     Fantasy matchups + broadcast guide (Saturday)
  *   cut-watch           Teams over roster limit (Sundays, Jul 15–Aug 16)
@@ -27,10 +27,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
-import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
+import { isDuplicate, appendToFeed, replaceInFeed } from './article-utils/feed-writer.mjs';
 import {
   findForeignLeagueNamesInPost,
   scrubPostLeagueNames,
@@ -98,7 +98,7 @@ const GROUPME_BOT_ENV = {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { type: null, week: null, year: null, dryRun: false, league: 'theleague' };
+  const opts = { type: null, week: null, year: null, dryRun: false, replace: false, league: 'theleague' };
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -107,6 +107,10 @@ function parseArgs() {
       case '--year': opts.year = parseInt(args[++i], 10); break;
       case '--league': opts.league = args[++i]; break;
       case '--dry-run': opts.dryRun = true; break;
+      // Re-write a column that already published WRONG, same id, in place.
+      // Only with an explicit --week: a re-run is a deliberate act on one
+      // named week, never something a scheduled tick can do.
+      case '--replace': opts.replace = true; break;
     }
   }
 
@@ -239,7 +243,13 @@ async function main() {
 
   // Step 5: Dedup check
   const feedPath = getFeedPath(projectRoot, league);
-  if (await isDuplicate(feedPath, articleId)) {
+  if (opts.replace && opts.week == null) {
+    console.error('--replace needs an explicit --week.');
+    process.exit(1);
+  }
+  if (opts.replace) {
+    console.log(`  [replace] Re-writing ${articleId} in place.`);
+  } else if (await isDuplicate(feedPath, articleId)) {
     console.log(`  [skip] Article ${articleId} already exists in feed. Exiting.`);
     return;
   }
@@ -247,6 +257,24 @@ async function main() {
   // Step 6: Load required data files
   console.log(`  Loading data: ${mod.config.requiredData.join(', ')}`);
   const data = await loadDataFiles(dataDir, mod.config.requiredData);
+
+  // Transactions come from MFL LIVE: the committed copy is held back by the
+  // roster sync and can be days old (see fetchLiveTransactions). The disk
+  // copy is only a fallback, and a type can tell which one it got from
+  // `data.transactionsSource` — the waiver column refuses to call a week
+  // empty off a stale copy.
+  if (mod.config.requiredData.includes('transactions')) {
+    try {
+      data.transactions = await fetchLiveTransactions(league, year);
+      data.transactionsSource = 'live';
+    } catch (err) {
+      console.warn(`  [warn] live MFL transactions unavailable (${err.message}); using the committed copy, which may be stale.`);
+      data.transactionsSource = 'disk';
+    }
+    const rows = data.transactions?.transactions?.transaction ?? [];
+    const newest = rows.reduce((m, t) => Math.max(m, parseInt(t.timestamp, 10) || 0), 0);
+    console.log(`  Transactions: ${rows.length} rows (${data.transactionsSource}), newest ${newest ? new Date(newest * 1000).toISOString() : 'none'}`);
+  }
 
   // Also load broadcast mappings if needed
   if (mod.config.requiredData.includes('broadcast-mappings')) {
@@ -368,7 +396,7 @@ async function main() {
   const scrubbed = scrubPostLeagueNames(post, league);
   if (scrubbed.length) console.warn(`  [league-name] Rewrote another league's name in: ${scrubbed.join(', ')}`);
 
-  const written = await appendToFeed(feedPath, post);
+  const written = opts.replace ? await replaceInFeed(feedPath, post) : await appendToFeed(feedPath, post);
   if (written) {
     console.log(`\n✅ Article "${post.headline}" appended to feed.`);
   }
