@@ -80,6 +80,8 @@ export function initBlockBannerAds() {
       subtree: true,
     });
   };
-  if (document.body) start();
-  else document.addEventListener('DOMContentLoaded', start);
+  // This runs on MFL's own pages (no ClientRouter); if the bundle loads in
+  // <head>, wait a frame at a time for <body> to exist.
+  const whenBody = () => (document.body ? start() : requestAnimationFrame(whenBody));
+  whenBody();
 }
