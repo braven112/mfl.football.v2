@@ -250,6 +250,16 @@ jobs:
             # no-op on every other day of the year. Each league announces when
             # ITS paste lands — there is no second date to keep in sync.
             each_league article:schedule-release node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE"
+          elif [ "$ARTICLE_TYPE" = "waiver-pickups" ]; then
+            # Not an article any more: one code-written post per league with
+            # Wednesday night's waiver claims and the FCFS adds after them,
+            # read live from MFL (scripts/schefter-waiver-wire.mjs). Feed only.
+            # "replace" re-writes this week's post in place.
+            WIRE_REPLACE_ARG=""
+            if [ "$REPLACE" = "true" ]; then
+              WIRE_REPLACE_ARG="--replace"
+            fi
+            each_league article:waiver-wire node scripts/schefter-waiver-wire.mjs $WIRE_REPLACE_ARG
           elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
             # Every league whose articleTypes allow it (TheLeague and the AFL);
             # each league previews its own slate from its own feeds.
@@ -293,6 +303,8 @@ jobs:
             FILES="$(jobfiles article:history-notebook '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
+          elif [ "$ARTICLE_TYPE" = "waiver-pickups" ]; then
+            FILES="$(jobfiles article:waiver-wire '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "matchup-preview" ]; then
             FILES="$(jobfiles article:matchup-preview '{schefterFeedPath}'),$(jobfiles article:matchup-preview '{dataPath}/derived')"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then

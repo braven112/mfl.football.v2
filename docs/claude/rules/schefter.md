@@ -1911,6 +1911,19 @@ pinned by `tests/espn-injuries.test.ts` against a recorded sample
   in-place replacement from #1735); a league overrides it with
   `reporterAvatars` in the registry, read by `leagueAuthorAvatar`.
 
+## The waiver wire is ONE code-written post per league, read LIVE
+
+Thursday 8 AM PT the `waiver-pickups` slot runs `scripts/schefter-waiver-wire.mjs`
+for every league in `article:waiver-wire` (TheLeague and the AFL): a list of
+the claims Wednesday night's run awarded, then the first-come-first-served adds
+made after it. It replaced the AI waiver column (Brandon, 2026-11-26: "we don't
+need a recap for either league but a single post in each league is great").
+It reads MFL's transactions export live, posts nothing when MFL can't be read,
+and skips when no `*AUTO_PROCESS_WAIVERS` row falls in the last week, so a
+stale copy can never read as an empty week. Feed only, no chat or push. The
+AFL's `WAIVER` rows carry `added`/`dropped` with no `transaction`, so read them
+through `rosterMoveString`. Guard: `tests/schefter-waiver-wire.test.ts`.
+
 ## The weekly columns read transactions LIVE, and a missing waiver run is a skip
 
 The committed `mfl-feeds/<year>/transactions.json` is not current: the roster

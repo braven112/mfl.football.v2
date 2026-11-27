@@ -45,6 +45,7 @@ describe('today’s leagues per job', () => {
     'article:schedule-strength': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
     'article:schedule-release': ['theleague', 'afl-fantasy'],
     'article:matchup-preview': ['theleague', 'afl-fantasy', 'archies', 'sandbox'],
+    'article:waiver-wire': ['theleague', 'afl-fantasy'],
     // Feed on, League History on, and a Record Book page to link to.
     'article:history-notebook': ['theleague', 'afl-fantasy'],
     'article:weekly': ['theleague'],
