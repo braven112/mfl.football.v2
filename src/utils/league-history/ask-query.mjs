@@ -75,6 +75,7 @@ export const FIELDS = {
     team: { type: 'string', label: 'Team', desc: "the team's name that season" },
     owner: { type: 'string', label: 'Owner' },
     division: { type: 'string', label: 'Division' },
+    conference: { type: 'string', label: 'Conference', desc: "the conference the team's division belonged to that season (e.g. American League, National League); empty in a league without conferences" },
     games: { type: 'number', label: 'GP', desc: 'regular-season games counted (all of them, or the first throughGames)' },
     w: { type: 'number', label: 'W', desc: 'wins in the counted games' },
     l: { type: 'number', label: 'L', desc: 'losses in the counted games' },
@@ -345,7 +346,7 @@ function prepare(ds) {
   return prepared;
 }
 
-function seasonRows(p, throughGames) {
+function seasonRows(p, throughGames, pools) {
   return p.teamSeasons.map(({ y, f, t, owner, done, games }) => {
     const regular = games.filter((g) => g.kind === 'regular');
     const counted = throughGames ? regular.slice(0, throughGames) : regular;
@@ -370,6 +371,7 @@ function seasonRows(p, throughGames) {
       team: t.n,
       owner: owner.name,
       division: t.d ?? '',
+      conference: (pools && t.d != null && pools[y]?.[t.d]) || '',
       games: n,
       w,
       l,
@@ -558,7 +560,7 @@ export function runQuery(ds, rawQuery, extra = {}) {
       : isCompetition
         ? pc[q.unit].filter((r) => inCompetition(r, q.competition))
         : q.unit === 'seasons'
-      ? seasonRows(p, q.throughGames)
+      ? seasonRows(p, q.throughGames, extra.pools || null)
       : q.unit === 'owners'
         ? ownerRows(p, q.years)
         : q.unit === 'games'
@@ -915,4 +917,26 @@ export function describeAsOf(asOf) {
   return asOf.week
     ? `Counted through ${asOf.year} Week ${asOf.week}; games still being played are not in yet`
     : `The ${asOf.year} season has no final games yet`;
+}
+
+/**
+ * The league's conferences for the model's prompt, from the seeding pools
+ * (seeding-pools.ts): their names, the short form owners use ("AL", "NL"),
+ * and which divisions sat in each. '' for a league without conferences.
+ * @param {Record<number, Record<string, string>> | false | null | undefined} pools
+ */
+export function describeConferences(pools) {
+  if (!pools) return '';
+  /** @type {Map<string, Set<string>>} */
+  const byName = new Map();
+  for (const map of Object.values(pools)) {
+    for (const [division, conference] of Object.entries(map ?? {})) {
+      if (!byName.has(conference)) byName.set(conference, new Set());
+      byName.get(conference).add(division);
+    }
+  }
+  if (byName.size < 2) return '';
+  const short = (name) => name.split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('');
+  const list = [...byName].map(([name, divs]) => `${name} ("${short(name)}"; divisions ${[...divs].join(', ')})`).join('; ');
+  return `- This league has conferences: ${list}. A conference named or abbreviated in a question ("${short([...byName.keys()][1])} team", "best in the ${[...byName.keys()][0]}") means that conference, never a division: filter seasons on conference (the conference the team's division belonged to that season), and group by team or owner for the best over a span. Conferences are not divisions; never say the league has no such conference.`;
 }
