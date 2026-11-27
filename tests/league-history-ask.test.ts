@@ -9,7 +9,7 @@ import theleaguePlayers from '../data/theleague/derived/league-history-players.j
 import aflPlayers from '../data/afl-fantasy/derived/league-history-players.json';
 import theleagueMoves from '../data/theleague/derived/league-history-moves.json';
 import aflMoves from '../data/afl-fantasy/derived/league-history-moves.json';
-import { QueryError, dataAsOf, describeAsOf, runQuery, normalizeQuery, teamRenames } from '../src/utils/league-history/ask-query.mjs';
+import { QueryError, dataAsOf, describeAsOf, describeConferences, runQuery, normalizeQuery, teamRenames } from '../src/utils/league-history/ask-query.mjs';
 import { askHistory, partialAnswer } from '../src/utils/league-history/ask';
 import { AI_PLANS } from '../src/utils/ai-plan.mjs';
 
@@ -302,6 +302,20 @@ describe('charts', () => {
     const r = runQuery(afl, { unit: 'rivalryGames', sort: [{ field: 'margin', dir: 'desc' }], chart: 'margin' }, { players: aflPlayers });
     expect(r.chart!.orderedBy).toBeUndefined();
     expect(answerCharts(r.chart, '/afl-fantasy/history').length).toBeGreaterThan(1);
+  });
+
+  // "Best NL team" got "the league has no NL" (2026-11-26): the AFL's two
+  // conferences reached Buck only through the rivalry unit's seeding pools.
+  it('gives every season its conference and names the conferences for the model', () => {
+    const pools = { 2025: { North: 'American League', South: 'American League', East: 'National League', West: 'National League' } };
+    const r = runQuery(afl, { unit: 'seasons', where: [{ field: 'conference', op: 'eq', value: 'National League' }, { field: 'year', op: 'eq', value: 2025 }], columns: ['team', 'division', 'conference'], limit: 30 }, { pools });
+    expect(r.total).toBe(12);
+    expect(r.rows.every((x) => x.cells[2] === 'National League' && ['East', 'West'].includes(String(x.cells[1])))).toBe(true);
+    const line = describeConferences(pools);
+    expect(line).toContain('National League ("NL"');
+    expect(line).toContain('American League ("AL"');
+    expect(describeConferences({ 2025: { North: 'Only' } })).toBe('');
+    expect(describeConferences(false)).toBe('');
   });
 
   it('refuses to chart a field that is not a number', () => {

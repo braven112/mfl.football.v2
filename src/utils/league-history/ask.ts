@@ -20,12 +20,11 @@
 import { responseText } from '../claude-models.mjs';
 import { addUsage, aiModelForLeague, emptyUsage, usageCost } from '../ai-plan.mjs';
 import { getLeagueBySlug } from '../../config/leagues';
-import { QueryError, competitionStory, dataAsOf, describeAsOf, querySchema, runQuery, teamRenames } from './ask-query.mjs';
+import { QueryError, competitionStory, dataAsOf, describeAsOf, describeConferences, querySchema, runQuery, teamRenames } from './ask-query.mjs';
 import { describeMissingWeeks } from './ask-players.mjs';
 import { tradeDeadlineIsoDate } from '../trade-deadline.mjs';
 import { titleBuildLine } from './ask-title-builds.mjs';
 import { CATEGORIES, SCOPES, recordBook } from './records.mjs';
-import { RIVALRY_GAME_UNITS } from './ask-rivalry-games.mjs';
 import { loadSeedingPools } from './seeding-pools';
 import { WHAT_IF_KINDS, WhatIfError, runWhatIf } from './what-if.mjs';
 import { leagueFeedPath, loadLeagueData } from '../league-data';
@@ -489,7 +488,7 @@ function careerLine(hasSalaries: boolean): string {
 - "Biggest/best free-agent or waiver pickup ever" uses pickupImpact: one row per pickup, valued over the WHOLE stint it opened (every season he stayed with that team, not just that season). Rank by points (his starter points for that team over the stint) unless the question names another measure, and say so; it can also rank by winsSwung, playoffPoints, titles or pointsSeason (that season only, the old pickups measure). winsSwung counts games the team won by less than he scored as a starter: with a zero in his slot each would have been a loss. State that assumption whenever you use it.`;
 }
 
-function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null, salaries: any = null): string {
+function systemPrompt(leagueSlug: string, ds: any, players: any, moves: any, competitions: any, keepers: any = null, pickTrades: any = null, salaries: any = null, pools: any = null): string {
   const league = getLeagueBySlug(leagueSlug);
   const latest = ds.seasons.at(-1);
   const current = Object.values(latest?.teams ?? {})
@@ -522,6 +521,7 @@ ${whatIfBlock(players, moves)}
 ${moves && players ? titleBuildLine() : ''}
 ${moves && players ? careerLine(!!salaries) : ''}
 ${competitionBlock(ds, competitions)}
+${describeConferences(pools)}
 - Always point to the Record Book when a board covers what was asked: read it with record_book, say where the answer stands against the record (it IS the record, or how far short of it), and cite the board in answer.records. For a season in progress, record_watch says who is on pace for a season record.
 - "Biggest game", "most important game", "game of the rivalry" or "closest playoff game" between two teams or owners use the rivalryGames unit: where team (or owner) is one side and opponent (or opponentOwner) the other, sorted by importance desc (biggest) or, for the closest playoff game, stakesLevel gte 60 sorted by absMargin asc; limit 3-5, chart margin, and columns year, week, stakes, team, score, opponent, oppScore, playoffSpot, decidedBy. Importance is STAKES FIRST (championship, then playoff rounds with the later round higher, then the third-place and placement games, then a regular-season game that decided a playoff spot, then the rest), the closer margin breaking ties. A playoff-spot game is one whose other result would have changed who made the playoffs; one that would only have forced a tiebreaker stays regular season (its playoffSpot says so). Name the stakes tier and, for a playoff-spot game, say who it put in or kept out (playoffSpot). Name the players who decided it only from decidedBy, topStarter, oppTopStarter and benchFlip, word for word: never guess a lineup. A conference league's playoff-spot line is its conference's. "My top rival" with no team named is the opponent owner the asker has played most (games, where owner is the asker, groupBy opponentOwner); say that is how you picked them.
 - When the answer is a ranking or a record, set chart on the query you show, to the field being ranked.
@@ -645,7 +645,15 @@ export async function askHistory(
     { role: 'user', content: `${askerBlock(asker)}${conversationBlock(turns)}<question>${question}</question>` },
   ];
 
-  const system = [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades, data.salaries), cache_control: { type: 'ephemeral' } }];
+  // The conferences (seeding pools) are read before the prompt is written: a
+  // question that names one ("best NL team") needs the model to know it
+  // exists, and the seasons unit carries each team's conference from them.
+  if (data.pools === undefined) {
+    const dataPath = getLeagueBySlug(leagueSlug)?.dataPath;
+    // false = unknown: no conference line, no playoff-spot games.
+    data.pools = dataPath ? await loadSeedingPools(dataPath).catch(() => false as const) : false;
+  }
+  const system = [{ type: 'text', text: systemPrompt(leagueSlug, ds, data.players, data.moves, data.competitions, data.keepers, data.pickTrades, data.salaries, data.pools), cache_control: { type: 'ephemeral' } }];
   const streaming = Boolean(onEvent && anthropic.messages.stream);
   const emit = (event: AskEvent) => {
     try {
@@ -690,13 +698,8 @@ export async function askHistory(
     }
 
     messages.push({ role: 'assistant', content: response.content });
-    // The rivalryGames unit seeds per conference: read the pools once, only when asked.
-    let pools = data.pools;
-    if (pools === undefined && uses.some((u) => u.name === RUN_QUERY_TOOL.name && RIVALRY_GAME_UNITS.includes(u.input?.unit))) {
-      const dataPath = getLeagueBySlug(leagueSlug)?.dataPath;
-      // false = unknown: no playoff-spot games rather than a league-wide line in a conference league.
-      pools = data.pools = dataPath ? await loadSeedingPools(dataPath).catch(() => false as const) : false;
-    }
+    // Seasons carry their conference and rivalryGames seeds per conference: both read the pools loaded above.
+    const pools = data.pools;
     // A what-if reads its season's feeds first (the only tool that waits on a load).
     const feedsByYear = new Map<number, WhatIfFeeds>();
     for (const use of uses) {
