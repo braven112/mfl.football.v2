@@ -99,6 +99,12 @@ import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
 import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import {
+  gameStatesByTeam,
+  hasKickedOff,
+  INJURY_TEMPLATES_LOCKED_BREAKING,
+  INJURY_TEMPLATES_LOCKED_STANDARD,
+} from './lib/injury-game-state.mjs';
 import { ESPN_INJURIES_URL, mflPlayersByEspnId, parseEspnInjuries } from './lib/espn-injuries.mjs';
 import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
@@ -3152,11 +3158,15 @@ async function loadPlayersByEspnId(league) {
 async function scanInjuries(league) {
   console.log(`\n=== Scanning Injuries (Doc Rivers) for ${league.slug} ===`);
 
-  // Season guard: check if there are upcoming NFL games
+  // Season guard: check if there are upcoming NFL games. The same scoreboard
+  // says whose game has already kicked off: once it has, that player is
+  // locked in every lineup, so Doc must not tell anyone to adjust one.
+  let gameStates = new Map();
   try {
     const sbRes = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
     if (sbRes.ok) {
       const sbData = await sbRes.json();
+      gameStates = gameStatesByTeam(sbData);
       if (!sbData.events || sbData.events.length === 0) {
         console.log('  No upcoming NFL games — skipping injury scan (offseason)');
         return 0;
@@ -3245,8 +3255,14 @@ async function scanInjuries(league) {
     // Skip minor non-rostered injuries to avoid feed spam
     if (tier === 'minor' && !change.isRostered) continue;
 
+    // His game has started: lineups are locked for him this week, so the
+    // copy reports the in-game news instead of asking for a lineup change.
+    const locked = hasKickedOff(gameStates, change.nflTeam);
+    if (locked && tier === 'breaking') templates = INJURY_TEMPLATES_LOCKED_BREAKING;
+    else if (locked && tier === 'standard') templates = INJURY_TEMPLATES_LOCKED_STANDARD;
+
     const template = pickTemplate(templates, change.espnId);
-    const body = template(change);
+    const body = template({ ...change, gameState: gameStates.get(String(change.nflTeam).toUpperCase()) });
     const headline = `${change.name} (${change.nflTeam}) → ${change.status}`;
 
     const post = {
