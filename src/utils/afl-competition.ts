@@ -19,6 +19,7 @@
  */
 
 import competitionHistory from '../../data/afl-fantasy/competition-history.json';
+import { getStandingsSeasonYear } from './league-year';
 import { type AflCompetition, PREMIER_LEAGUE, D_LEAGUE, getCompetitionLogo, getCompetitionLogoDark } from './afl-competition-logo';
 
 export { type AflCompetition, PREMIER_LEAGUE, D_LEAGUE, getCompetitionLogo, getCompetitionLogoDark };
@@ -98,7 +99,12 @@ export interface CompetitionChampions {
 
 interface TierSeason {
   membership?: Record<string, AflCompetition | string>;
+  /** `competition-history` | `rollforward:<year>` | `projected:<year>` (see compute-afl-competition-movement.mjs). */
   membershipSource?: string;
+  /** Set while the makeup is a mid-season projection: the last finished week it reflects. */
+  projectedThroughWeek?: number;
+  /** Hand corrections (owner changes) laid over the computed makeup on every run. */
+  membershipOverrides?: Record<string, AflCompetition | string>;
   champions?: CompetitionChampions;
   championsSource?: string;
   allPlayStandings?: Record<string, string[]>;
@@ -136,13 +142,43 @@ export function getCompetitionMembershipYears(): number[] {
 }
 
 /**
- * The most recent season's tier membership — the "current makeup". Prefers the
- * latest recorded membership year (which includes the rolled-forward upcoming
- * season once a season completes).
+ * The "current makeup": the membership of the season the AFL's standings show
+ * (getStandingsSeasonYear, its June 1 clock), or the latest recorded season
+ * before it. NEVER a later season: the movement job writes next season's makeup
+ * as soon as Week 17 is final, and that list is for articles to cite until
+ * June 1 (getUpcomingCompetitionMembership), not for labels to switch to
+ * (Brandon, 2026-11-24).
  */
-export function getCurrentCompetitionMembership(): Record<string, AflCompetition> | null {
-  const years = getCompetitionMembershipYears();
+export function getCurrentCompetitionMembership(referenceDate?: Date): Record<string, AflCompetition> | null {
+  const season = getStandingsSeasonYear('afl-fantasy', referenceDate);
+  const years = getCompetitionMembershipYears().filter((y) => y <= season);
   return years.length ? getCompetitionMembership(years[years.length - 1]) : null;
+}
+
+export interface UpcomingCompetitionMembership {
+  year: number;
+  membership: Record<string, AflCompetition>;
+  /** True while the season is still being played: "on course for", not "will be in". */
+  projected: boolean;
+  /** For a projection, the last finished week it reflects; null once final. */
+  throughWeek: number | null;
+}
+
+/**
+ * Next season's makeup until the AFL turns over on June 1 and it becomes the
+ * current makeup. Mid-season it is a PROJECTION (the movement rule applied to
+ * the all-play table through the last finished week, refreshed weekly) and
+ * says so; after Week 17 it is final. For articles and anything that names who
+ * is headed to the Premier League / D-League next season — always word a
+ * projection as "on course for", never as settled.
+ */
+export function getUpcomingCompetitionMembership(referenceDate?: Date): UpcomingCompetitionMembership | null {
+  const year = getStandingsSeasonYear('afl-fantasy', referenceDate) + 1;
+  const membership = getCompetitionMembership(year);
+  if (!membership || !Object.keys(membership).length) return null;
+  const season = SEASONS[String(year)];
+  const projected = String(season?.membershipSource ?? '').startsWith('projected:');
+  return { year, membership, projected, throughWeek: projected ? season?.projectedThroughWeek ?? null : null };
 }
 
 /**
@@ -151,12 +187,18 @@ export function getCurrentCompetitionMembership(): Record<string, AflCompetition
  * afl.assets.json) deliberately carry no `competition` field, because a copy
  * there is not rolled over each season and once put ten teams in last year's
  * league on the homepage (Nov 2026). Pass the season the page shows; with no
- * season, the latest recorded membership (the current makeup) answers.
+ * season, the season the standings show by default (getStandingsSeasonYear,
+ * the AFL's June 1 rollover) answers.
  */
 export function getTeamCompetition(franchiseId: string | null | undefined, year?: number | string | null): AflCompetition | null {
   if (!franchiseId) return null;
   const id = String(franchiseId).padStart(4, '0');
-  const membership = year != null ? getCompetitionMembership(year) : getCurrentCompetitionMembership();
+  // No season given: the season the AFL's standings show (its June 1 clock),
+  // so a team's competition turns over with the standings, never before them;
+  // the season-end movement job records next season's makeup months early.
+  const membership =
+    getCompetitionMembership(year ?? getStandingsSeasonYear('afl-fantasy')) ??
+    (year == null ? getCurrentCompetitionMembership() : null);
   const tier = membership?.[id];
   return typeof tier === 'string' && tier ? tier : null;
 }

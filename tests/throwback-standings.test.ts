@@ -73,7 +73,8 @@ describe('standings pages share one season clock', () => {
   for (const [file, src] of Object.entries(seasonResolvers)) {
     it(`${file}: the default year follows ?testDate=`, () => {
       expect(src).toMatch(/const testDate = getTestDateFromSearchParams\((Astro\.)?url\.searchParams\);/);
-      expect(src).toMatch(/const currentSeasonYear = getCurrentSeasonYear\(testDate \?\? undefined\);/);
+      // The league's own start-of-season clock (Brandon, 2026-11-24), on the test date.
+      expect(src).toMatch(/const currentSeasonYear = getStandingsSeasonYear\([^,]+, testDate \?\? undefined\);/);
       // No second, real-clock season year.
       expect(src).not.toMatch(/getCurrentSeasonYear\(\)/);
     });
@@ -94,8 +95,9 @@ describe('standings pages share one season clock', () => {
   it('AFL family: the throwback gate reads the test clock too', () => {
     const page = read('src/components/shared/standings/AflFamilyStandingsPage.astro');
     expect(page).toMatch(
-      /getCurrentSeasonYear\(getTestDateFromSearchParams\(Astro\.url\.searchParams\) \?\? undefined\)/,
+      /getStandingsSeasonYear\(leagueDef\.slug, getTestDateFromSearchParams\(Astro\.url\.searchParams\) \?\? undefined\)/,
     );
     expect(page).not.toMatch(/getCurrentSeasonYear\(\)/);
+    expect(page).not.toMatch(/getStandingsSeasonYear\([^,)]+\)/);
   });
 });

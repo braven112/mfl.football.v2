@@ -8,7 +8,7 @@
  * the route too: a glob specifier cannot be a runtime variable.
  */
 import type { LeagueDefinition } from '../config/leagues';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from './league-year';
+import { getStandingsSeasonYear, getTestDateFromSearchParams } from './league-year';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from './live-standings';
 
 /** Re-key an eager feed glob (`…/mfl-feeds/2025/standings.json`) by season. */
@@ -52,7 +52,7 @@ export async function resolveStandingsRoute(
   // The default follows ?testDate= — the same clock StandingsPage's throwback
   // gate reads — so /rollover-check can drive this page by date alone.
   const testDate = getTestDateFromSearchParams(url.searchParams);
-  const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
+  const currentSeasonYear = getStandingsSeasonYear(league.slug, testDate ?? undefined);
   const defaultYear = availableYears.includes(currentSeasonYear) ? currentSeasonYear : availableYears[0] || currentSeasonYear;
   const requestedYear = url.searchParams.get('year');
   const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;

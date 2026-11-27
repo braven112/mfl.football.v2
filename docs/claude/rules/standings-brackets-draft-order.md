@@ -389,3 +389,18 @@ holds exactly `keepers` players for **all 24 franchises**, so any tile built on
 it reads "7 of 7" league-wide. The AFL homepage shipped that tile for months
 rendering a bare `—`; it is now the calendar-rotating spotlight in
 `src/utils/afl-team-spotlight.ts`.
+
+## Standings turn over on the league's own start-of-season date
+
+Brandon, 2026-11-24: "All leagues should always use their start of season date
+to show the new standings." The default season of every standings surface
+(standings pages, homepage standings cards, the AFL's Premier League /
+D-League membership via `getTeamCompetition`) is `getStandingsSeasonYear(slug)`
+in `src/utils/league-year.ts`, which is the registry rollover
+(`getLeagueYearForSlug`): TheLeague after Feb 14 at 8:45 PM PT, the AFL June 1.
+From that date the new season shows at 0-0 until Week 1; before it, the
+finished season stays up. It is NOT the Labor Day clock. The AFL's
+`competition-history.json` gets next season's makeup at season end, months
+before the rollover, so reading the latest recorded membership instead of the
+standings season would move teams early. Pinned by
+`tests/afl-competition-single-master.test.ts`.

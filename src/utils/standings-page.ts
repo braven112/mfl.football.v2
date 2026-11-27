@@ -9,12 +9,13 @@
  * route stays a thin wrapper and no two leagues re-derive the same season
  * logic.
  *
- * Standings are RESULTS-shaped, so the default season is
- * `getCurrentSeasonYear()` (the Labor Day clock), never the league year.
+ * The default season is the league's own start-of-season date
+ * (`getStandingsSeasonYear`, the registry rollover: TheLeague after Feb 14,
+ * the AFL June 1), never the Labor Day clock — from that date the new season
+ * shows at 0-0 (Brandon, 2026-11-24). Every caller passes it.
  */
 import type { LeagueDefinition } from '../config/leagues';
 import type { StandingsFranchise } from '../types/standings';
-import { getCurrentSeasonYear } from './league-year';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from './live-standings';
 import { loadSeasonFeed, seasonsFromGlob, type LazyFeedGlob } from './mfl-feed-glob';
 import { getDivisionChampionDetails } from './standings';
@@ -46,7 +47,7 @@ export interface StandingsSeasonChoice {
 export function chooseStandingsSeason(
   standingsFeeds: LazyFeedGlob,
   requested: string | null,
-  currentSeasonYear: number = getCurrentSeasonYear()
+  currentSeasonYear: number
 ): StandingsSeasonChoice {
   const availableYears = seasonsFromGlob(standingsFeeds).sort((a, b) => b - a);
   const defaultYear = availableYears.includes(currentSeasonYear)

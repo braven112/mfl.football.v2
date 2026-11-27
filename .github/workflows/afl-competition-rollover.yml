@@ -5,8 +5,11 @@ name: AFL Competition Rollover
 # season's makeup (data/afl-fantasy/competition-history.json), then refreshes the
 # trophy-wall tier champions in data/afl-fantasy/awards-history.json.
 #
-# Idempotent: the meaningful change lands once a season's week-17 (cutoff)
-# all-play is final; every other run is a no-op and the commit guard skips it.
+# While a season is being played, each run also rewrites NEXT season's makeup
+# as a projection through the last finished NFL week (`projected:<year>`), so
+# articles can name who is on course to go up or down (Brandon, 2026-11-24).
+# The final roll-forward replaces it once the week-17 (cutoff) all-play is
+# final; in the offseason runs are no-ops and the commit guard skips them.
 # Runs offline against the genuine 2024+ local feeds that Roster Sync keeps
 # current, so no MFL credentials are needed.
 #
@@ -15,8 +18,10 @@ name: AFL Competition Rollover
 
 on:
   schedule:
-    # Mondays 09:00 UTC. Weekly is plenty — tier makeup changes once a year.
-    - cron: "0 9 * * 1"
+    # Tuesdays 16:00 UTC (8 AM PT): an NFL week ends with Monday night, and the
+    # site's week turns over Tuesday at midnight PT, so this run is the first to
+    # count the week just played in the projection.
+    - cron: "0 16 * * 2"
   workflow_dispatch:
 
 concurrency:

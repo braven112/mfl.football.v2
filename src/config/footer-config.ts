@@ -103,10 +103,9 @@ export function pathBelongsToLeague(
  * at, so the label can't flicker as you click around other franchises.
  *
  * Reads getCurrentCompetitionMembership() rather than keying off getCurrentSeasonYear():
- * the season year rolls at Labor Day, but tier membership is written per season
- * and rolled forward when a season completes. Between those two moments there
- * is no row for the current season year, so a year-keyed lookup returns null
- * and silently labels every D-League owner "Premier League".
+ * that follows the AFL's own June 1 clock (the same season the standings show)
+ * and falls back to the latest earlier season, so the label never goes blank
+ * and never jumps to next season's makeup before June 1.
  *
  * KNOWN GAP: two AFL pages (players, draft-predictor) set prerender = true, so
  * there is no request at build time and this falls back to the default there.

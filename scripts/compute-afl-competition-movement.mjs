@@ -28,9 +28,9 @@
  * JOIN the league always start in the D-League, regardless of which tier their
  * franchise slot competed in — so a turnover year relegates correspondingly
  * fewer Premier League teams. This roll-forward is franchise-id-based and
- * cannot detect owner changes; when an owner leaves, hand-correct the NEXT
- * season's membership in competition-history.json after running this (the re-run
- * preserves the correction). Also why 2017-2019 membership can't be
+ * cannot detect owner changes; when an owner leaves, record the correction in
+ * the NEXT season's `membershipOverrides` (see HAND CORRECTIONS below) — an
+ * edit to `membership` itself is overwritten by the next run. Also why 2017-2019 membership can't be
  * reconstructed by formula (2016→2017 alone had slot swaps AND new owners).
  *
  * DATA SOURCING NOTE (load-bearing): pre-2024 local feeds under
@@ -40,8 +40,24 @@
  * mismatch the year is fetched online (www44/L=19621) when --online is set,
  * else skipped. 2024+ local caches are genuine AFL.
  *
+ * PROJECTION (Brandon, 2026-11-24): while a season is being played, every run
+ * also writes NEXT season's makeup as it stands — the movement rule applied to
+ * the all-play table through the last FINISHED NFL week — onto the next season
+ * with `membershipSource: "projected:<year>"` and `projectedThroughWeek`, so
+ * articles can say who is on course to go up or down. Once the cutoff week is
+ * final the normal roll-forward replaces it (`rollforward:<year>`). Pages never
+ * show it early: the current makeup follows the AFL's June 1 clock
+ * (getCurrentCompetitionMembership); articles read it through
+ * getUpcomingCompetitionMembership.
+ *
+ * HAND CORRECTIONS go in the season's `membershipOverrides`
+ * ({ franchiseId: "Premier League" | "D-League" }), never by editing
+ * `membership`: every run recomputes `membership` and lays the overrides on
+ * top, so a correction survives the weekly reruns and the final roll-forward.
+ * A new owner forced down needs a matching team moved up to keep 12/12.
+ *
  * Usage:
- *   node scripts/compute-afl-competition-movement.mjs            # latest completed season
+ *   node scripts/compute-afl-competition-movement.mjs            # latest completed season + projection
  *   node scripts/compute-afl-competition-movement.mjs --year 2025
  *   node scripts/compute-afl-competition-movement.mjs --all      # every season with membership
  *   node scripts/compute-afl-competition-movement.mjs --online   # allow MFL fetch for contaminated/missing years
@@ -60,6 +76,8 @@ import {
   computeCompetitionMovement,
 } from './lib/afl-competition-standings.mjs';
 import { resolveCompetitionCutoffWeek } from '../src/utils/all-play.mjs';
+import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import { leagueYearFor } from './lib/schefter-league-year.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -243,6 +261,75 @@ async function computeSeason(history, cfg, year, cutoffWeek) {
   return { year, membership, membershipSource: source, movement };
 }
 
+// A season's hand corrections ride on top of the computed makeup (see HAND
+// CORRECTIONS in the header). Keys are franchise ids, values a competition.
+export function withOverrides(membership, overrides) {
+  if (!overrides || !Object.keys(overrides).length) return membership;
+  const out = { ...membership };
+  for (const [id, tier] of Object.entries(overrides)) {
+    if (tier === PREMIER || tier === DLEAGUE) out[String(id).padStart(4, '0')] = tier;
+    else warn(`membershipOverrides: ${id} → "${tier}" is not a competition — ignored`);
+  }
+  return out;
+}
+
+/**
+ * The last NFL week that is over (the week before the current one), capped at
+ * the competition cutoff. 0 before Week 2 begins.
+ */
+export function finishedWeekThrough(year, now, cutoffWeek) {
+  const current = nflWeekFor(year, now);
+  return Math.max(0, Math.min(current - 1, cutoffWeek));
+}
+
+// Next season's makeup as it stands mid-season. Skips once the cutoff week is
+// final (the roll-forward owns it then) and never touches a recorded
+// roll-forward.
+async function projectNextSeason(history, cfg) {
+  const now = new Date();
+  const year = leagueYearFor(AFL_LEAGUE, now);
+  const cutoffWeek = resolveCompetitionCutoffWeek(cfg.competitionSettings, year);
+  const through = finishedWeekThrough(year, now, cutoffWeek);
+  if (through < 1) {
+    log(`${year}: no finished week yet — no projection`);
+    return;
+  }
+  if (through >= cutoffWeek) {
+    log(`${year}: Week ${cutoffWeek} is final — the roll-forward owns ${year + 1}, no projection`);
+    return;
+  }
+  const nextYear = String(year + 1);
+  const nextSeason = history.seasons[nextYear] ?? {};
+  if (nextSeason.membershipSource && !String(nextSeason.membershipSource).startsWith('projected:')) {
+    log(`${nextYear}: makeup already recorded (${nextSeason.membershipSource}) — no projection`);
+    return;
+  }
+  const { membership } = resolveMembership(history, cfg, year);
+  if (!membership) {
+    warn(`${year}: no recorded membership — cannot project ${nextYear}`);
+    return;
+  }
+  const weekly = await loadWeeklyResults(cfg, year, through);
+  if (!weekly) {
+    warn(`${year}: no usable weekly results — cannot project ${nextYear}`);
+    return;
+  }
+  const allPlay = computeAllPlayThroughCutoff(weekly, through);
+  const movement = computeCompetitionMovement(membership, allPlay, history.movementRules);
+  // Sorted by franchise id: the projection is rewritten weekly, and a key
+  // order that follows the table would churn the file on every rank swap.
+  const projected = withOverrides(movement.nextMembership, nextSeason.membershipOverrides);
+  nextSeason.membership = Object.fromEntries(Object.entries(projected).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  nextSeason.membershipSource = `projected:${year}`;
+  nextSeason.projectedThroughWeek = through;
+  history.seasons[nextYear] = nextSeason;
+  log(
+    `  → ${nextYear} makeup PROJECTED through Week ${through}: up ${movement.autoPromoted.map((id) => nameFor(cfg, id)).join(', ') || '—'}; ` +
+      `down ${movement.autoRelegated.map((id) => nameFor(cfg, id)).join(', ') || '—'}` +
+      (movement.swing ? `; playoff → Premier ${movement.swing.promoted.map((id) => nameFor(cfg, id)).join(', ')}` : ''),
+  );
+}
+
 async function main() {
   const cfg = await loadConfig();
 
@@ -294,17 +381,22 @@ async function main() {
     // champions already recorded for next year (e.g. if it later completes).
     const nextYear = String(year + 1);
     const nextSeason = history.seasons[nextYear] ?? {};
-    nextSeason.membership = result.movement.nextMembership;
+    nextSeason.membership = withOverrides(result.movement.nextMembership, nextSeason.membershipOverrides);
     nextSeason.membershipSource = `rollforward:${year}`;
+    delete nextSeason.projectedThroughWeek;
     history.seasons[nextYear] = nextSeason;
     log(`  → ${nextYear} makeup rolled forward (${result.movement.next[PREMIER].length} Premier / ${result.movement.next[DLEAGUE].length} D-League)`);
   }
+
+  if (!SINGLE_YEAR && !ALL) await projectNextSeason(history, cfg);
 
   await writeJson(OUTPUT_PATH, history);
   log(`wrote ${path.relative(ROOT, OUTPUT_PATH)}`);
 }
 
-main().catch((err) => {
-  console.error('[afl-competition] fatal:', err);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch((err) => {
+    console.error('[afl-competition] fatal:', err);
+    process.exit(1);
+  });
+}

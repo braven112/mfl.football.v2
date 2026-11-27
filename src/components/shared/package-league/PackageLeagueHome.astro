@@ -35,7 +35,7 @@ import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { groupStandingsByDivision, rosterPlayerIds, standingsRows as feedStandingsRows, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
 import { madPlayoffSize, madQualifierTiers, madSeeds } from '../../../utils/mad-standings';
 import { loadSeasonFeed, resolveSeason, seasonsFromGlob, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
-import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCurrentSeasonYear, getLeagueYearForSlug, getStandingsSeasonYear } from '../../../utils/league-year';
 import { loadTransactionsSeason } from '../../../utils/transactions-feeds';
 import { getGlobalPlayerMap } from '../../../utils/player-map';
 import { franchiseSlug, leagueHasBrandBook } from '../../../utils/franchise-marks';
@@ -132,7 +132,8 @@ const frontPage = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview) =
 
 // ── Results-shaped data: the SEASON year ─────────────────────────────────────
 const seasonYear = getCurrentSeasonYear(now);
-const standingYear = resolveSeason(null, seasonsFromGlob(standingsFeeds), seasonYear);
+// Standings turn over on the league's own start-of-season date (Brandon, 2026-11-24).
+const standingYear = resolveSeason(null, seasonsFromGlob(standingsFeeds), getStandingsSeasonYear(league.slug, now));
 const standingsFeed = standingYear ? await loadSeasonFeed(standingsFeeds, standingYear) : null;
 const groups = groupStandingsByDivision(standingsFeed, config.teams, config.divisions ?? []);
 const scheduleYear = resolveSeason(null, seasonsFromGlob(scheduleFeeds), seasonYear);

@@ -319,3 +319,17 @@ export function getLeagueYearForSlug(slug: string, referenceDate?: Date): number
     ? getRolloverLeagueYear(league.leagueYearRollover, referenceDate)
     : getCurrentLeagueYear(referenceDate);
 }
+
+/**
+ * The season a league's STANDINGS show by default: the league's own new-season
+ * date, read from the registry (getLeagueYearForSlug) — TheLeague after Feb 14
+ * at 8:45 PM PT, the AFL on June 1. From that moment the new season shows, at
+ * 0-0 until Week 1, and the standings, homepage and competitions all turn over
+ * together (Brandon, 2026-11-24: "all leagues should always use their start of
+ * season date to show the new standings"). It is NOT getCurrentSeasonYear's
+ * Labor Day clock, which kept last season's table up for months after the
+ * league itself had moved on.
+ */
+export function getStandingsSeasonYear(slug: string, referenceDate?: Date): number {
+  return getLeagueYearForSlug(slug, referenceDate);
+}
