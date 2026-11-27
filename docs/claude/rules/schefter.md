@@ -1910,3 +1910,32 @@ pinned by `tests/espn-injuries.test.ts` against a recorded sample
 - **Avatars:** the site-wide art is `SCHEFTER_AUTHORS` (`?v=2` busts the
   in-place replacement from #1735); a league overrides it with
   `reporterAvatars` in the registry, read by `leagueAuthorAvatar`.
+
+## The waiver wire is ONE code-written post per league, read LIVE
+
+Thursday 8 AM PT the `waiver-pickups` slot runs `scripts/schefter-waiver-wire.mjs`
+for every league in `article:waiver-wire` (TheLeague and the AFL): a list of
+the claims Wednesday night's run awarded, then the first-come-first-served adds
+made after it. It replaced the AI waiver column (Brandon, 2026-11-26: "we don't
+need a recap for either league but a single post in each league is great").
+It reads MFL's transactions export live, posts nothing when MFL can't be read,
+and skips when no `*AUTO_PROCESS_WAIVERS` row falls in the last week, so a
+stale copy can never read as an empty week. Feed only, no chat or push. The
+AFL's `WAIVER` rows carry `added`/`dropped` with no `transaction`, so read them
+through `rosterMoveString`. Guard: `tests/schefter-waiver-wire.test.ts`.
+
+## The weekly columns read transactions LIVE, and a missing waiver run is a skip
+
+The committed `mfl-feeds/<year>/transactions.json` is not current: the roster
+sync publishes through the live league-data pointer and holds changed store
+files out of git. On 2026-11-25 the waiver column read that copy (newest row
+six days old) and published "Zero claims, zero dollars" three hours after the
+scanner posted a $725K claim from the same run. So `schefter-weekly-articles`
+fetches transactions from MFL (`fetchLiveTransactions`) and falls back to disk
+only with a warning, and the waiver column returns null when its window holds
+no `*AUTO_PROCESS_WAIVERS` row — a copy that does not reach the run must never
+read as an empty week. The column runs Thursday 8 AM PT and covers the seven
+days before it, labeling each pickup as a waiver claim, an FCFS add after the
+run, or an FCFS add before it; the AFL's `WAIVER` rows carry `added`/`dropped`
+with no `transaction`, so read them through `rosterMoveString`.
+Guard: `tests/waiver-recap-window.test.ts`.

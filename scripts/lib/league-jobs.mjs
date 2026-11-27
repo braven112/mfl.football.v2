@@ -95,6 +95,13 @@ export const LEAGUE_JOBS = {
    */
   'article:matchup-preview': writes('matchup-preview'),
   /**
+   * The Thursday waiver-wire post (scripts/schefter-waiver-wire.mjs): one
+   * code-written list per league of the run's claims and the FCFS adds after
+   * it. Replaced the AI waiver column, which ran for the default league only
+   * (Brandon, 2026-11-26: "a single post in each league"). No model call.
+   */
+  'article:waiver-wire': writes('waiver-pickups'),
+  /**
    * Buck's Notebook (scripts/buck-notebook.mjs): Tuesday history facts about
    * the coming week. No model call, so no Claude cost; it needs the league's
    * feed, its League History dataset and a Record Book page to link to.

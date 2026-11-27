@@ -217,6 +217,8 @@ export type TransactionSubType =
   | 'IR'
   /** "Notable … roster moves today:" — several routine moves in one post */
   | 'ROSTER_MOVES'
+  /** Thursday's list of the waiver run's claims + the FCFS adds after it (scripts/lib/schefter-waiver-wire.mjs) */
+  | 'WAIVER_WIRE'
   // Site-generated lanes
   | 'milestone'
   | 'rumor_mill'
