@@ -58,7 +58,8 @@ describe('weekly columns do not claim the homepage hero', () => {
     // assertion below passes vacuously, which is the failure mode to catch.
     // weekend-preview was retired from the schedule in Nov 2026 (folded into
     // the Saturday Matchup Preview), so it is no longer a weekly column.
-    expect(weekly).toContain('waiver-pickups');
+    // waiver-pickups was retired from the schedule in Nov 2026 too.
+    expect(weekly).toContain('schedule-strength');
     expect(weekly).toContain('matchup-preview');
     // The daily, event-gated release column is not a weekly column.
     expect(weekly).not.toContain('schedule-release');
