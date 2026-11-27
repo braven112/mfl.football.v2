@@ -314,6 +314,22 @@ div[id*="google_vignette"] {
   pointer-events: none !important;
 }
 
+// Banner + sticky-footer ads (MFL serves these through Freestar, to signed-in
+// owners). src/scripts/shared/blockBannerAds.js collapses any wrapper the
+// slot leaves behind and marks it with data-mfl-ad-hidden.
+[data-freestar-ad],
+div[id^="myfantasyleague_leaderboard"],
+div[id^="myfantasyleague_leftrail"],
+div[id^="myfantasyleague_rightrail"],
+div[id^="myfantasyleague_stickyfooter"],
+#fs-sticky-footer,
+.fs-sticky-footer,
+.fs-sticky-parent,
+.fs-sticky-wrapper,
+[data-mfl-ad-hidden] {
+  display: none !important;
+}
+
 body {
   font-family: $body-font;
   color: $primary-text-color;
