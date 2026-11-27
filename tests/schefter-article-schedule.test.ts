@@ -43,7 +43,7 @@ describe('schefterArticleDecision', () => {
   it('maps every weekly column to its Pacific weekday and hour', () => {
     expect(due('2026-11-17T15:00:00Z')).toEqual(['pecking-order']); // Tue 7am PST
     expect(due('2026-11-18T17:00:00Z')).toEqual(['schedule-strength']); // Wed 9am PST
-    expect(due('2026-11-19T06:00:00Z')).toEqual(['waiver-pickups']); // Wed 10pm PST
+    expect(due('2026-11-19T06:00:00Z')).toEqual([]); // Wed 10pm PST: waiver article retired
     expect(due('2026-08-02T15:00:00Z')).toEqual(['cut-watch']); // Sun 8am PDT
   });
 
