@@ -425,7 +425,9 @@ async function main() {
   //
   // Still gated on `written`: a re-run must never re-buzz the chat (same
   // no-double-ping rule as schefter-announce.mjs).
-  if (written && typeof mod.buildGroupMePromo === 'function') {
+  // A --replace re-writes a column owners were already told about: it never
+  // re-announces it (no second chat post, no second push).
+  if (written && !opts.replace && typeof mod.buildGroupMePromo === 'function') {
     const text = mod.buildGroupMePromo(post, enrichment, { league });
     if (text) {
       const { file, size } = await enqueueAnnounce(projectRoot, {
