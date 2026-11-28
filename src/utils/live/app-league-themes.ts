@@ -5,7 +5,7 @@
  * the account owns a team in.
  */
 
-import themes from '../../data/mfl-live-app-league-themes.json';
+import { APP_LEAGUE_THEMES } from '../../config/mfl-live-app-league-themes.generated';
 import { getLeagueById } from '../../config/leagues';
 import { appLeagueLogo } from './app-league-logo';
 
@@ -29,7 +29,7 @@ export interface AppLeagueTheme {
   colors: AppLeagueThemeColors;
 }
 
-const BY_SLUG = themes as Record<string, { theme: string; colors: AppLeagueThemeColors }>;
+const BY_SLUG: Record<string, { theme: string; colors: AppLeagueThemeColors }> = APP_LEAGUE_THEMES;
 
 /**
  * One theme per league we run among `leagueIds`, in the order given, with

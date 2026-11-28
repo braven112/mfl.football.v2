@@ -19,9 +19,10 @@ import {
 } from '../scripts/lib/app-league-themes.mjs';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { appLeagueThemesFor } from '../src/utils/live/app-league-themes';
+import { APP_LEAGUE_THEMES } from '../src/config/mfl-live-app-league-themes.generated';
 
 const committed = fs.readFileSync(path.join(process.cwd(), APP_LEAGUE_THEMES_FILE), 'utf8');
-const themes = JSON.parse(committed) as Record<string, { theme: string; colors: Record<string, string> }>;
+const themes = APP_LEAGUE_THEMES;
 
 describe('app league themes data', () => {
   it('matches the builder (run node scripts/build-app-league-themes.mjs)', () => {
