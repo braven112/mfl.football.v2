@@ -11,7 +11,7 @@ import {
 } from '@expo-google-fonts/vend-sans';
 import { signOutOnServer } from './src/api';
 import { clearToken, loadToken, saveToken } from './src/session';
-import { useTheme } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { SessionProvider } from './src/session-context';
@@ -19,7 +19,6 @@ import { registerForPush, unregisterForPush } from './src/push/notifications';
 
 /** Signed out shows sign-in; signed in shows the tabbed app (src/navigation). */
 export default function App() {
-  const t = useTheme();
   // Vend Sans ships inside the app, so this resolves on the first frames; a
   // font that fails to load falls back to the system face rather than blocking.
   const [fontsLoaded, fontError] = useFonts({
@@ -57,18 +56,27 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      {token === undefined || (!fontsLoaded && !fontError) ? (
-        <View style={{ flex: 1, backgroundColor: t.ground, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={t.accent} />
-        </View>
-      ) : session ? (
-        <SessionProvider value={session}>
-          <RootNavigator />
-        </SessionProvider>
-      ) : (
-        <SignInScreen onSignedIn={onSignedIn} />
-      )}
+      <ThemeProvider token={token}>
+        <StatusBar style="light" />
+        {token === undefined || (!fontsLoaded && !fontError) ? (
+          <Loading />
+        ) : session ? (
+          <SessionProvider value={session}>
+            <RootNavigator />
+          </SessionProvider>
+        ) : (
+          <SignInScreen onSignedIn={onSignedIn} />
+        )}
+      </ThemeProvider>
     </SafeAreaProvider>
+  );
+}
+
+function Loading() {
+  const t = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: t.ground, alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator color={t.accent} />
+    </View>
   );
 }
