@@ -137,6 +137,20 @@ numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
 
+## 2026-11-27 - A Light-Locked Seasonal Skin Needs A Full Dark Palette, And Gold Fails Three Guards
+
+Christmas was light-locked (`lock: 'light'`, toggle hidden) until Brandon asked
+for both modes. Unlocking a skin is not a one-line change: its JSON had only a
+light palette, so dark mode fell through to the league's own dark tokens under
+a pine header. Write the whole `dark` block in the theme JSON, then regenerate.
+A gold primary (#d4b26a) failed three separate guards: draft-timer (dark primary
+mixed 70% with black must still carry white text, so it is #c4a15a), the Live
+accent (light `--hero-accent` vs white needs 4.5, so light uses #86672a) and the
+gray placeholder contrast on muted surfaces. Pick an accent, then run
+`tests/league-themes*`, `draft-timer-banner-contrast` and
+`live-scoring-accent-theming` before tuning anything by eye. A decorative
+`box-shadow` ring counts against the shadow-literal ratchet; `outline` does not.
+
 ## 2026-09-29 - A Global Stylesheet @imported In A Layout <style> Is Not Global (scoped-@import)
 
 Astro scopes rules that a component `<style>` block pulls in with `@import`,
