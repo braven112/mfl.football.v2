@@ -267,7 +267,7 @@ jobs:
             # stakes read the derived file this writes, as does the Playoff
             # Odds page the preview links to.
             node scripts/compute-playoff-odds.mjs || echo "::warning::playoff odds compute failed (non-fatal)"
-            each_league article:matchup-preview node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
+            each_league article:matchup-preview node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG $REPLACE_ARG
           else
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG $REPLACE_ARG
           fi

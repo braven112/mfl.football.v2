@@ -583,6 +583,23 @@ export interface MatchupKeyNflGame {
   players: Array<{ franchiseId: string; name: string; position: string; nflTeam: string; proj: number }>;
 }
 
+export interface MatchupLiveStart {
+  /** Weekday of the last NFL game already final, in the league's clock ("Friday"). */
+  through: string | null;
+  a: MatchupLiveSide;
+  b: MatchupLiveSide;
+  /** The best finished starters across both lineups, highest first (up to four). */
+  done: Array<{ franchiseId: string; name: string; position: string; nflTeam: string; score: number }>;
+}
+
+export interface MatchupLiveSide {
+  score: number;
+  /** Starters whose NFL game had not finished. */
+  left: number;
+  /** Points so far plus the projection of the starters still to play; null with no lineup. */
+  projFinal: number | null;
+}
+
 export interface MatchupVisualsMatchup {
   /** Schefter's write-up for this game, plain text, one paragraph per entry (Nov 2026). */
   story?: string[];
@@ -592,6 +609,12 @@ export interface MatchupVisualsMatchup {
    * reads. MFL team codes; `players` is the top four by projection.
    */
   keyGame?: MatchupKeyNflGame;
+  /**
+   * The week so far (Nov 2026): the score when the preview was written, after
+   * the week's early NFL games (Thursday, Thanksgiving, a Wednesday opener).
+   * Absent when neither side had a starter in a game that had kicked off.
+   */
+  live?: MatchupLiveStart;
   a: MatchupVisualsSide;
   b: MatchupVisualsSide;
   series: MatchupVisualsSeries | null;

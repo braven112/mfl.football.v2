@@ -27,7 +27,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions, fetchLiveScoring, fetchLiveProjections } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed, replaceInFeed } from './article-utils/feed-writer.mjs';
@@ -276,6 +276,27 @@ async function main() {
     console.log(`  Transactions: ${rows.length} rows (${data.transactionsSource}), newest ${newest ? new Date(newest * 1000).toISOString() : 'none'}`);
   }
 
+  // The week so far, from MFL LIVE (Nov 2026): a column that runs after the
+  // week's first NFL games (the Saturday preview) starts from their points.
+  // Unavailable is not fatal — the column is then the plain pre-week preview.
+  if (mod.config.liveScoring) {
+    try {
+      data.liveScoring = await fetchLiveScoring(league, year, week);
+    } catch (err) {
+      console.warn(`  [warn] live MFL scoring unavailable (${err.message}); writing without the games already played.`);
+      data.liveScoring = null;
+    }
+    // The projections must be THIS week's: the committed copy is whichever
+    // week the roster sync fetched last (it held Week 13 on Week 12's Saturday).
+    if (data.projectedScores && String(data.projectedScores.projectedScores?.week) !== String(week)) {
+      try {
+        data.projectedScores = await fetchLiveProjections(league, year, week);
+      } catch (err) {
+        console.warn(`  [warn] week ${week} projections unavailable (${err.message}); the committed copy is week ${data.projectedScores.projectedScores?.week}.`);
+      }
+    }
+  }
+
   // Also load broadcast mappings if needed
   if (mod.config.requiredData.includes('broadcast-mappings')) {
     const mainRepo = projectRoot.includes('.claude/worktrees/')
@@ -413,7 +434,9 @@ async function main() {
   //
   // Still gated on `written`: a re-run must never re-buzz the chat (same
   // no-double-ping rule as schefter-announce.mjs).
-  if (written && typeof mod.buildGroupMePromo === 'function') {
+  // A --replace re-writes a column owners were already told about: it never
+  // re-announces it (no second chat post, no second push).
+  if (written && !opts.replace && typeof mod.buildGroupMePromo === 'function') {
     const text = mod.buildGroupMePromo(post, enrichment, { league });
     if (text) {
       const { file, size } = await enqueueAnnounce(projectRoot, {

@@ -29,6 +29,7 @@ import { plainText } from '../../src/utils/article-paragraphs.mjs';
 import { selectWeekMatchups, nflWeekGames, keyNflGame } from '../../src/utils/nfl-week-games.mjs';
 import { parseStartingLineups } from '../lib/lineup-warnings.mjs';
 import { ALIASES as NFL_CODE_ALIASES } from '../lib/nfl-logo-sources.mjs';
+import { weekSoFar, unplayedGames, liveCardSnapshot } from '../../src/utils/matchup-preview-live.mjs';
 
 /**
  * MFL's NFL team codes (NOS, KCC, GBP…) in the standard form the cards print
@@ -51,6 +52,10 @@ export const config = {
   requiredData: ['weekly-results-raw', 'projectedScores', 'standings', 'players', 'rosters', 'league'],
   // Previews the games still to be played: the runner targets completedWeek + 1.
   previewsUpcomingWeek: true,
+  // Read MFL's live scoring at write time: by Saturday the week's Thursday
+  // (and some weeks Wednesday, Thanksgiving or Friday) games are already
+  // final, and the preview starts from their points (owner's call, Nov 2026).
+  liveScoring: true,
   postType: 'article',
   // NOT 'breaking'. The homepage's breaking-story hero takes the freshest
   // tier:'breaking' post under 48h old at P0 (src/utils/offseason-hero-data.ts
@@ -185,13 +190,28 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // the most projected points across both teams' starters. Same schedule feed
   // and the same projected-points question the Sunday Ticket board asks.
   const nflGames = await loadNflWeekGames(projectRoot, year, league, week);
+  const now = data.now ?? Date.now();
+  // The games already played this week (null before the first kickoff).
+  const soFar = weekSoFar(data.liveScoring, {
+    nflGames, players, projections, now, zone: LEAGUES[league].officialClock?.zone,
+  });
+  for (const m of rendered.matchups) {
+    const live = liveCardSnapshot(soFar, m.a.franchiseId, m.b.franchiseId);
+    if (live) m.live = live;
+  }
+  // A game that has kicked off cannot be the one to watch: the key NFL game
+  // is chosen from the games still to come.
+  const gamesAhead = unplayedGames(nflGames, now);
+  const teamsAhead = new Set(gamesAhead.flatMap((g) => [g.away, g.home]));
+  const teamsPlayed = new Set(nflGames.flatMap((g) => [g.away, g.home]).filter((t) => !teamsAhead.has(t)));
+  const isPlayed = (team) => teamsPlayed.has(String(team ?? '').toUpperCase());
   const startersOf = startersResolver(data['weekly-results-raw'], week, rosterMap, projections, players);
   const keyGameByPair = new Map();
-  if (nflGames.length) {
+  if (gamesAhead.length) {
     for (const { franchise1Id, franchise2Id } of pairings) {
       const k = pairKey(franchise1Id, franchise2Id);
       if (keyGameByPair.has(k)) continue;
-      const game = keyNflGame(nflGames, [
+      const game = keyNflGame(gamesAhead, [
         { franchiseId: franchise1Id, players: startersOf(franchise1Id) },
         { franchiseId: franchise2Id, players: startersOf(franchise2Id) },
       ]);
@@ -209,12 +229,13 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   lines.push('');
   const dhBriefing = doubleheaderBriefing(weekFormat);
   if (dhBriefing) { lines.push(dhBriefing); lines.push(''); }
+  for (const line of weekSoFarFacts(soFar)) lines.push(line);
 
   if (rendered.race) {
     const r = rendered.race;
     lines.push(`PLAYOFF RACE (simulated odds, ${r.spots} playoff spots, regular season ends week ${r.lastWeek}):`);
     for (const t of r.teams.slice(0, 20)) {
-      lines.push(`  ${nameOf(t.franchiseId)} (${t.wins}-${t.losses}${t.ties ? `-${t.ties}` : ''}): ${pct(t.playoff)} playoff odds${r.hasByes ? `, ${pct(t.bye)} bye odds` : ''}`);
+      lines.push(`  ${nameOf(t.franchiseId)} (${t.wins}-${t.losses}${t.ties ? `-${t.ties}` : ''}): ${pct(t.playoff)} chance to make the playoffs${r.hasByes ? `, ${pct(t.bye)} chance at a first-round bye` : ''}`);
     }
     if (r.lockedIds.length) lines.push(`  ${r.lockedIds.length} teams are already all but in.`);
     lines.push('');
@@ -257,6 +278,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     const stakes = stakesByPair.get([franchise1Id, franchise2Id].sort().join('-'));
     for (const fact of stakesFacts(stakes, nameOf)) lines.push(`  ${fact}`);
     const keyGame = keyGameByPair.get(pairKey(franchise1Id, franchise2Id));
+    for (const fact of matchupSoFarFacts(soFar, franchise1Id, franchise2Id, nameOf)) lines.push(`  ${fact}`);
     if (keyGame) lines.push(`  ${keyGameFact(keyGame, nameOf)}`);
     const hometown = hometownFact(franchise1Id, franchise2Id, hometowns, nameOf);
     if (hometown) lines.push(`  ${hometown}`);
@@ -267,8 +289,26 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     }
 
     for (const [fid, teamInfo] of [[franchise1Id, t1], [franchise2Id, t2]]) {
+      // Once games have been played, the team's line is its projected FINAL:
+      // points already banked plus the starters still to play.
+      const live = soFar?.teams.get(fid);
+      if (live?.projFinal != null) {
+        lines.push(`  ${teamInfo?.name ?? fid} (projected final ${live.projFinal.toFixed(1)} = ${live.score.toFixed(1)} already scored + starters still to play):`);
+        for (const s of live.left.slice(0, 5)) {
+          const team = nflCode(s.nflTeam);
+          lines.push(`    ${s.position} ${s.name} (${team}) — still to play, proj ${s.proj.toFixed(1)}`);
+          if (team && team !== '??') {
+            if (!nflTeamPlayers[team]) nflTeamPlayers[team] = [];
+            nflTeamPlayers[team].push({ player: s.name, position: s.position, franchise: teamInfo?.name ?? fid });
+          }
+        }
+        if (!live.left.length && !live.live.length) lines.push('    Every starter has already played.');
+        continue;
+      }
       const roster = rosterMap[fid] || [];
       const projected = roster
+        // A player whose game is already over is not "projected" any more.
+        .filter((pid) => !soFar || !isPlayed(players.get(pid)?.team))
         .map(pid => {
           const info = players.get(pid);
           const proj = projections.get(pid) || 0;
@@ -301,7 +341,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   // NFL Broadcast Guide
   lines.push('=== NFL BROADCAST GUIDE ===');
-  lines.push(`Key NFL games featuring ${LEAGUES[league].name} rostered starters:`);
+  lines.push(`NFL games STILL TO BE PLAYED featuring ${LEAGUES[league].name} rostered starters${soFar ? ' (games already played are left out)' : ''}:`);
 
   // Load broadcast mappings
   const mainRepo = projectRoot.includes('.claude/worktrees/')
@@ -332,7 +372,58 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: { visuals: rendered, names, pairKeys } };
 }
 
-const pct = (x) => `${Math.round(x * 100)}%`;
+/**
+ * Odds as a percentage. Never rounds to a flat 100% or 0%: 99.6% printed as
+ * "100%" read as a clinched spot, and the copy then said "at 100%".
+ */
+export const pct = (x) => (x >= 0.995 && x < 1 ? 'over 99%' : x > 0 && x < 0.005 ? 'under 1%' : `${Math.round(x * 100)}%`);
+
+/** The week-so-far header: which games are already in the books. */
+export function weekSoFarFacts(soFar) {
+  if (!soFar) return [];
+  const out = [];
+  if (soFar.finals.length) {
+    const list = soFar.finals.map((g) => `${nflCode(g.away)} at ${nflCode(g.home)}`).join(', ');
+    out.push(`THE WEEK SO FAR: this preview is written AFTER ${soFar.finals.length} NFL game${soFar.finals.length === 1 ? '' : 's'} of the week ${soFar.finals.length === 1 ? 'was' : 'were'} already played (through ${soFar.through}): ${list}. Those points are already on the board in every matchup below. Never preview those games; treat them as done.`);
+  } else {
+    out.push('THE WEEK SO FAR: the week has kicked off and a game is in progress; scores below are live.');
+  }
+  const inProgress = soFar.started.filter((g) => !soFar.finals.includes(g));
+  if (inProgress.length) {
+    out.push(`IN PROGRESS as this is written: ${inProgress.map((g) => `${nflCode(g.away)} at ${nflCode(g.home)}`).join(', ')}. Its points so far are in the scores below; it is not over, so do not treat it as done or preview it as if it has not started.`);
+  }
+  out.push('');
+  return out;
+}
+
+/** One matchup's start: the score so far, who is done, how many are left. */
+export function matchupSoFarFacts(soFar, aId, bId, nameOf) {
+  const a = soFar?.teams.get(aId);
+  const b = soFar?.teams.get(bId);
+  if (!a || !b) return [];
+  const left = (t) => t.left.length + t.live.length;
+  const side = (id, t) => `${nameOf(id)} ${t.score.toFixed(1)} (${left(t)} starter${left(t) === 1 ? '' : 's'} still to play${t.projFinal != null ? `, projected final ${t.projFinal.toFixed(1)}` : ''})`;
+  const out = [`SCORE SO FAR: ${side(aId, a)} vs ${side(bId, b)}.`];
+  const done = [
+    ...a.done.map((p) => ({ ...p, fid: aId })),
+    ...b.done.map((p) => ({ ...p, fid: bId })),
+  ].sort((x, y) => y.score - x.score).slice(0, 4);
+  // A Saturday game (a few late-season weeks) can be under way when the
+  // column is written at 11 AM PT: its players are mid-game, not done.
+  const playing = [
+    ...a.live.map((p) => ({ ...p, fid: aId })),
+    ...b.live.map((p) => ({ ...p, fid: bId })),
+  ].sort((x, y) => y.score - x.score).slice(0, 4);
+  if (playing.length) {
+    out.push(`PLAYING RIGHT NOW (game in progress as this is written, points so far): ${playing.map((p) => `${p.position === 'Def' ? '' : `${p.position} `}${p.name} (${nameOf(p.fid)}, ${nflCode(p.nflTeam)}) ${p.score.toFixed(1)}`).join('; ')}.`);
+  }
+  if (done.length) {
+    out.push(`ALREADY PLAYED (final, do not preview): ${done.map((p) => `${p.position === 'Def' ? '' : `${p.position} `}${p.name} (${nameOf(p.fid)}) scored ${p.score.toFixed(1)}`).join('; ')}.`);
+  } else {
+    out.push('Neither team had a starter in the games already played: this one starts at 0-0.');
+  }
+  return out;
+}
 
 /** This week's NFL games, from the same `nflSchedule.json` the Sunday Ticket board reads (the full archive as a fallback). */
 async function loadNflWeekGames(projectRoot, year, league, week) {
@@ -404,10 +495,13 @@ export function attachGameStories(visuals, games, pairKeys, { closing } = {}) {
 function stakesFacts(stakes, nameOf) {
   if (!stakes || stakes.swing < 0.02) return [];
   const key = stakes.kind === 'bye' ? 'bye' : 'playoff';
-  const out = [`STAKES (${key} odds; this game swings them up to ${pct(stakes.swing)}):`];
+  // Every number is named for what it is: "at 16%" with no noun is how the
+  // copy left readers guessing (owner's note, 2026-11-28).
+  const what = key === 'bye' ? 'chance at a first-round bye' : 'chance to make the playoffs';
+  const out = [`STAKES (simulated ${what}; this game swings it by up to ${pct(stakes.swing)}):`];
   for (const s of [stakes.a, stakes.b]) {
     if (!s) continue;
-    out.push(`  ${nameOf(s.franchiseId)}: ${pct(s.now[key])} now, ${pct(s.win[key])} with a win, ${pct(s.loss[key])} with a loss`);
+    out.push(`  ${nameOf(s.franchiseId)}: ${pct(s.now[key])} ${what} now, ${pct(s.win[key])} with a win, ${pct(s.loss[key])} with a loss`);
   }
   return out;
 }
