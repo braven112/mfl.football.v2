@@ -1,8 +1,13 @@
 /**
- * Waiver Pickups — Who got picked up this week via BBID/waiver.
- * Runs Wednesday 10pm PT after waivers process.
+ * Waiver Pickups — the week's waiver run plus the first-come-first-served
+ * pickups around it, in one recap.
+ * Runs Thursday morning PT, after Wednesday night's waiver run and the FCFS
+ * scramble that follows it (src/utils/sync-cadence.ts). The window is the
+ * seven days before the run, so each recap starts where the last one ended
+ * and every pickup lands in exactly one.
  *
- * Fact sheet: Per-team waiver claims with player name, position, bid amount.
+ * Fact sheet: Per-team pickups with player name, position, price, and whether
+ * each was a waiver claim, an FCFS add after the run, or an FCFS add earlier.
  * AI output: { headline, excerpt, content: string[] }
  */
 
@@ -11,7 +16,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { articlePrompt } from '../article-utils/article-prompts.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
-import { parseRosterMove } from '../lib/roster-move-parse.mjs';
+import { parseRosterMove, rosterMoveString } from '../lib/roster-move-parse.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
@@ -35,7 +40,33 @@ function countOf(n, noun) {
   return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
-export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
+/** Rows that are a claim decided BY the waiver run (a bid, or rolling priority). */
+const WAIVER_CLAIM_TYPES = new Set(['BBID_WAIVER', 'WAIVER']);
+/** The row MFL writes once per waiver run, claims or not. */
+const WAIVER_RUN_TYPES = new Set(['BBID_AUTO_PROCESS_WAIVERS', 'AUTO_PROCESS_WAIVERS']);
+/** Fact-sheet order within a team: the run first, then what followed it. */
+const KIND_ORDER = { waiver: 0, fcfsAfter: 1, fcfsBefore: 2 };
+
+/** "Wed Nov 25, 7:00 PM" on the league's Pacific clock. */
+function formatPacific(unixSeconds) {
+  return new Date(unixSeconds * 1000).toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
+/** How a pickup arrived, in words the model can repeat. */
+function kindLabel(c, minimumSalary) {
+  if (c.type === 'BBID_WAIVER') return 'waiver claim, blind bid';
+  if (c.type === 'WAIVER') return 'waiver claim, rolling priority';
+  const when = c.kind === 'fcfsAfter' ? 'right after the waiver run' : 'earlier in the week, before the run';
+  return minimumSalary > 0
+    ? `first-come-first-served add ${when} — signs at the league-minimum salary, NOT free`
+    : `first-come-first-served add ${when}`;
+}
+
+export async function buildFactSheet(data, week, year, projectRoot, options = {}) {
+  const { league = DEFAULT_LEAGUE_SLUG } = options;
   const players = new Map();
   // Raw feed records (position + espn_id) for hero-player selection.
   const playerMeta = new Map();
@@ -63,14 +94,39 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // assets for zero dollars". Absent for a league without salaries.
   const minimumSalary = LEAGUES[league].minimumSalary ?? 0;
 
-  // Filter BBID_WAIVER and FREE_AGENT transactions from the past 7 days
-  const now = Date.now() / 1000; // Unix seconds
-  const sevenDaysAgo = now - (7 * 24 * 60 * 60);
-  const txns = (data.transactions.transactions?.transaction || [])
-    .filter(t =>
-      (t.type === 'BBID_WAIVER' || t.type === 'FREE_AGENT') &&
-      parseInt(t.timestamp, 10) >= sevenDaysAgo
+  // The window is the seven days before the run, so consecutive weekly
+  // recaps tile the calendar with no gap and no overlap.
+  const now = (options.now ?? Date.now()) / 1000; // Unix seconds
+  const windowStart = now - (7 * 24 * 60 * 60);
+  const inWindow = (t) => {
+    const ts = parseInt(t.timestamp, 10);
+    return ts >= windowStart && ts <= now;
+  };
+  const allRows = (data.transactions.transactions?.transaction || []);
+
+  // The waiver run itself. MFL logs one AUTO_PROCESS row per run, claims or
+  // not (BBID_ for a blind-bid league, plain for the AFL's rolling priority),
+  // stamped with the same second as the claims it processed. It is how the
+  // recap tells an FCFS add AFTER the run from one before it — and its absence
+  // means the data does not reach this week's run at all. That was the
+  // 2026-11-25 failure: a stale copy whose newest row predated the run, read
+  // as "zero claims, zero dollars". A missing run is a skip, never a zero.
+  const runTimestamps = allRows
+    .filter((t) => WAIVER_RUN_TYPES.has(t.type) && inWindow(t))
+    .map((t) => parseInt(t.timestamp, 10));
+  const claimRows = allRows.filter((t) => WAIVER_CLAIM_TYPES.has(t.type) && inWindow(t));
+  if (runTimestamps.length === 0 && claimRows.length === 0) {
+    console.warn(
+      `  [waiver-pickups] no waiver run in the last 7 days of ${data.transactionsSource ?? 'the'} transactions — ` +
+      'not writing a recap that would call the week empty.'
     );
+    return null;
+  }
+  const waiverRunAt = Math.max(...runTimestamps, ...claimRows.map((t) => parseInt(t.timestamp, 10)));
+
+  const txns = allRows.filter((t) =>
+    (WAIVER_CLAIM_TYPES.has(t.type) || t.type === 'FREE_AGENT') && inWindow(t)
+  );
 
   // Parse transactions into structured claims
   const claimsByTeam = {};
@@ -78,6 +134,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   let highestBid = { amount: 0, player: '', team: '' };
   // Scored candidates for the composite hero — the biggest bid gets the face.
   const heroCandidates = [];
+  const counts = { waiver: 0, fcfsAfter: 0, fcfsBefore: 0 };
 
   // Parse each move with the SHARED positional parser, never an ad-hoc split.
   // MFL writes the add side with a TRAILING COMMA ("16171,|775000|16752,"), so
@@ -86,9 +143,12 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // is encoded as an EMPTY add segment ("|15749,"), so a `.filter(Boolean)`
   // before indexing promotes the dropped player to a phantom pickup — the same
   // bug the scanner already shipped once (see scripts/lib/roster-move-parse.mjs).
+  // The AFL's plain WAIVER rows carry `added`/`dropped` and NO `transaction`,
+  // so the move string comes from rosterMoveString — reading `txn.transaction`
+  // alone dropped every AFL waiver claim from this column.
   let claimCount = 0;
   for (const txn of txns) {
-    const { addedIds, bbidAmount } = parseRosterMove(txn.transaction);
+    const { addedIds, bbidAmount } = parseRosterMove(rosterMoveString(txn));
 
     // A BBID row the parser could not read is UNPARSED, not a drop and not a
     // free pickup — so both of its failure modes warn, and neither is decided
@@ -113,12 +173,18 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     const teamName = teams.get(fid)?.name ?? `Team ${fid}`;
     if (!claimsByTeam[fid]) claimsByTeam[fid] = { name: teamName, claims: [] };
 
+    const ts = parseInt(txn.timestamp, 10);
+    const kind = txn.type !== 'FREE_AGENT'
+      ? 'waiver'
+      : ts >= waiverRunAt ? 'fcfsAfter' : 'fcfsBefore';
+
     for (const playerId of addedIds) {
-      // A BBID bid buys the one player on the add side; a free-agent add signs
-      // at the league minimum (0 where the league has no salaries).
-      const bidAmount = txn.type === 'FREE_AGENT'
-        ? minimumSalary
-        : addedIds.length === 1 && Number.isFinite(bbidAmount) ? bbidAmount : 0;
+      // A BBID bid buys the one player on the add side; any other pickup
+      // (a free-agent add, a rolling-priority waiver claim) signs at the
+      // league minimum (0 where the league has no salaries).
+      const bidAmount = txn.type === 'BBID_WAIVER'
+        ? addedIds.length === 1 && Number.isFinite(bbidAmount) ? bbidAmount : 0
+        : minimumSalary;
       const playerInfo = players.get(playerId);
 
       const claim = {
@@ -127,10 +193,12 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
         bid: bidAmount,
         bidDisplay: formatSalary(bidAmount),
         type: txn.type,
+        kind,
       };
 
       claimsByTeam[fid].claims.push(claim);
       claimCount += 1;
+      counts[kind] += 1;
       totalSpent += bidAmount;
       heroCandidates.push({ id: playerId, score: bidAmount });
 
@@ -142,46 +210,52 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   const lines = [];
   lines.push(`WEEK ${week} WAIVER PICKUPS — ${LEAGUES[league].name} (${year} Season)`);
-  lines.push(`Total claims this week: ${claimCount}`);
-  lines.push(`Total spent: ${formatSalary(totalSpent)}`);
+  lines.push(`Waiver run: ${formatPacific(waiverRunAt)} PT`);
+  lines.push(`Total pickups this week: ${claimCount}`);
+  lines.push(`  - Waiver claims in the run: ${counts.waiver}`);
+  lines.push(`  - First-come-first-served adds right after the run: ${counts.fcfsAfter}`);
+  lines.push(`  - First-come-first-served adds earlier in the week, before the run: ${counts.fcfsBefore}`);
+  // A league without salaries or bids (the AFL) has nothing to spend; "$0
+  // spent" lines there only invite the model to call pickups free.
+  const priced = totalSpent > 0;
+  if (priced) lines.push(`Total spent: ${formatSalary(totalSpent)}`);
   if (minimumSalary > 0) {
     lines.push(`League rule: every pickup, waiver bid or first-come-first-served, costs at least the ${formatSalary(minimumSalary)} league-minimum salary. No pickup is free.`);
   }
   lines.push('');
 
   // Counts CLAIMS, not rows: a week of nothing but drops has txns but no pickups.
+  // Reaching here means the run WAS in the data, so this is a real empty week.
   if (claimCount === 0) {
     lines.push('No waiver claims or free agent pickups this week.');
     return { factSheet: lines.join('\n'), enrichment: {} };
   }
 
-  lines.push('=== CLAIMS BY TEAM ===');
+  lines.push('=== PICKUPS BY TEAM ===');
   const sortedTeams = Object.entries(claimsByTeam)
     .sort((a, b) => b[1].claims.reduce((s, c) => s + c.bid, 0) - a[1].claims.reduce((s, c) => s + c.bid, 0));
 
   for (const [fid, teamData] of sortedTeams) {
     const teamSpend = teamData.claims.reduce((s, c) => s + c.bid, 0);
-    lines.push(`── ${teamData.name} (${countOf(teamData.claims.length, 'claim')}, ${formatSalary(teamSpend)} spent) ──`);
-    for (const c of teamData.claims.sort((a, b) => b.bid - a.bid)) {
-      const typeLabel = c.type !== 'FREE_AGENT'
-        ? ''
-        : minimumSalary > 0
-          ? ' [FCFS free-agent add — signs at the league-minimum salary, NOT free]'
-          : ' [FA]';
-      lines.push(`  - ${c.position} ${c.player} (${c.bidDisplay})${typeLabel}`);
+    lines.push(priced
+      ? `── ${teamData.name} (${countOf(teamData.claims.length, 'pickup')}, ${formatSalary(teamSpend)} spent) ──`
+      : `── ${teamData.name} (${countOf(teamData.claims.length, 'pickup')}) ──`);
+    for (const c of teamData.claims.sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || b.bid - a.bid)) {
+      const price = priced ? ` (${c.bidDisplay})` : '';
+      lines.push(`  - ${c.position} ${c.player}${price} [${kindLabel(c, minimumSalary)}]`);
     }
     lines.push('');
   }
 
   lines.push('=== SPENDING SUMMARY ===');
-  lines.push(`Biggest spender: ${sortedTeams[0]?.[1]?.name} (${formatSalary(sortedTeams[0]?.[1]?.claims.reduce((s, c) => s + c.bid, 0))})`);
+  if (priced) lines.push(`Biggest spender: ${sortedTeams[0]?.[1]?.name} (${formatSalary(sortedTeams[0]?.[1]?.claims.reduce((s, c) => s + c.bid, 0))})`);
   // A week of nothing but free-agent adds has no priced claim, so highestBid is
   // still its {0, '', ''} seed — printing it emits "Highest single bid: $0 for
   // by " into the model's only source of truth. The AFL has never had a BBID
   // row at all, so that is every AFL week. Omit the line instead.
   if (highestBid.amount > 0) {
     lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
-  } else {
+  } else if (priced) {
     lines.push('Highest single bid: none — no claim this week carried a bid.');
   }
   // sortedTeams is ordered by SPEND, so [0] is the biggest spender — asking it
@@ -191,7 +265,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     (a, b) => (b[1].claims.length > a[1].claims.length ? b : a),
     sortedTeams[0]
   );
-  lines.push(`Most claims: ${busiest?.[1]?.name} (${busiest?.[1]?.claims.length})`);
+  lines.push(`Most pickups: ${busiest?.[1]?.name} (${busiest?.[1]?.claims.length})`);
 
   const heroPlayerId = pickHeroPlayer(heroCandidates, playerMeta);
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
