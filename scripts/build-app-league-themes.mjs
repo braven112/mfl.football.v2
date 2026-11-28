@@ -21,7 +21,12 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const file = path.join(ROOT, APP_LEAGUE_THEMES_FILE);
 const next = serializeAppLeagueThemes(buildAppLeagueThemes());
-const prev = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+let prev = '';
+try {
+  prev = fs.readFileSync(file, 'utf8');
+} catch {
+  // First run: nothing written yet.
+}
 if (prev === next) {
   console.log(`${APP_LEAGUE_THEMES_FILE}: unchanged`);
 } else {
