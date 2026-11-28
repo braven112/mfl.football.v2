@@ -27,7 +27,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions, fetchLiveScoring } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions, fetchLiveScoring, fetchLiveProjections } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed, replaceInFeed } from './article-utils/feed-writer.mjs';
@@ -285,6 +285,15 @@ async function main() {
     } catch (err) {
       console.warn(`  [warn] live MFL scoring unavailable (${err.message}); writing without the games already played.`);
       data.liveScoring = null;
+    }
+    // The projections must be THIS week's: the committed copy is whichever
+    // week the roster sync fetched last (it held Week 13 on Week 12's Saturday).
+    if (data.projectedScores && String(data.projectedScores.projectedScores?.week) !== String(week)) {
+      try {
+        data.projectedScores = await fetchLiveProjections(league, year, week);
+      } catch (err) {
+        console.warn(`  [warn] week ${week} projections unavailable (${err.message}); the committed copy is week ${data.projectedScores.projectedScores?.week}.`);
+      }
     }
   }
 

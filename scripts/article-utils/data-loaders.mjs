@@ -131,6 +131,29 @@ export async function fetchLiveScoring(league, year, week, { fetchImpl = fetch }
 }
 
 /**
+ * One week's MFL projections, read live. The committed projectedScores.json
+ * is whatever week the roster sync last fetched: on Saturday 2026-11-28 it
+ * held Week 13 while the preview wrote Week 12, so every "projected" number
+ * in that column was next week's. Throws on an error or a different week.
+ * @param {string} league registry slug
+ * @param {number} year
+ * @param {number} week
+ * @param {{ fetchImpl?: typeof fetch }} [opts]
+ */
+export async function fetchLiveProjections(league, year, week, { fetchImpl = fetch } = {}) {
+  const reg = leagueRegistry(league);
+  const url = `https://${reg.mflHost}/${year}/export?TYPE=projectedScores&L=${reg.id}&W=${week}&JSON=1`;
+  const res = await fetchImpl(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' } });
+  if (!res.ok) throw new Error(`MFL projectedScores export returned ${res.status}`);
+  const body = await res.json();
+  const ps = body?.projectedScores;
+  if (!ps || String(ps.week) !== String(week)) {
+    throw new Error(`MFL projectedScores export was not week ${week}: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+  return body;
+}
+
+/**
  * Resolve the main repo data directory (handles worktree paths).
  * When running from .claude/worktrees/*, we read from main repo data/.
  */
