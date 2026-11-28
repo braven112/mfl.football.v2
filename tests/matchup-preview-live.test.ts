@@ -98,7 +98,7 @@ describe('a Saturday game under way at write time', () => {
   const SAT = Date.parse('2026-11-28T18:30:00Z') / 1000;
   const games = [...nflGames, { away: 'SEA', home: 'LAR', kickoff: SAT }];
   const live = structuredClone(liveScoring);
-  live.liveScoring.matchup[0].franchise[0].players.player[2] = { id: '4', status: 'starter', score: '6.00', gameSecondsRemaining: '1800' };
+  (live.liveScoring.matchup[0].franchise[0].players.player as Array<Record<string, string>>)[2] = { id: '4', status: 'starter', score: '6.00', gameSecondsRemaining: '1800' };
   const soFar = weekSoFar(live, { ...ctx, nflGames: games })!;
 
   it('counts its points so far and half the projection still to come', () => {
