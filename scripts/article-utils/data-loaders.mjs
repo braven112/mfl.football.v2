@@ -107,6 +107,30 @@ export async function fetchLiveTransactions(league, year, { fetchImpl = fetch } 
 }
 
 /**
+ * One week's live scoring, read from MFL at write time, with every player's
+ * points and clock (`DETAILS=1`). The Saturday preview uses it to start from
+ * the games already played (Thursday, Thanksgiving, a Wednesday opener).
+ *
+ * MFL answers errors as HTTP 200, so a body without `liveScoring` is a
+ * failure. Throws; the caller decides the fallback.
+ * @param {string} league registry slug
+ * @param {number} year
+ * @param {number} week
+ * @param {{ fetchImpl?: typeof fetch }} [opts]
+ */
+export async function fetchLiveScoring(league, year, week, { fetchImpl = fetch } = {}) {
+  const reg = leagueRegistry(league);
+  const url = `https://${reg.mflHost}/${year}/export?TYPE=liveScoring&L=${reg.id}&W=${week}&DETAILS=1&JSON=1`;
+  const res = await fetchImpl(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' } });
+  if (!res.ok) throw new Error(`MFL liveScoring export returned ${res.status}`);
+  const body = await res.json();
+  if (!body || typeof body !== 'object' || !body.liveScoring) {
+    throw new Error(`MFL liveScoring export carried no liveScoring: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+  return body;
+}
+
+/**
  * Resolve the main repo data directory (handles worktree paths).
  * When running from .claude/worktrees/*, we read from main repo data/.
  */

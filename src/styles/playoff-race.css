@@ -258,6 +258,33 @@ html.dark .prb-lbl {
   margin-bottom: 0;
 }
 
+/* The week so far: the score when the preview was written, both sides
+   facing each other, team-colored like every other row on the card. */
+.sgc-sofar-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.sgc-sofar-score .sgc-lbl:first-child {
+  text-align: right;
+}
+
+.sgc-sofar-score b {
+  font-size: var(--font-size-2xl, 1.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+html.dark .sgc-sofar-score b {
+  color: var(--prb-ink) !important;
+}
+
+.sgc-sofar-dash {
+  color: var(--prb-muted);
+}
+
 /* Key NFL game: one row per player, team tag, name, projection. */
 .sgc-keyp {
   list-style: none;

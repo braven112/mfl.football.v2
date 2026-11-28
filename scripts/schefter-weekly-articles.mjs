@@ -27,7 +27,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions } from './article-utils/data-loaders.mjs';
+import { loadJSON, resolveDataDir, getFeedPath, loadTeams, fetchLiveTransactions, fetchLiveScoring } from './article-utils/data-loaders.mjs';
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed, replaceInFeed } from './article-utils/feed-writer.mjs';
@@ -274,6 +274,18 @@ async function main() {
     const rows = data.transactions?.transactions?.transaction ?? [];
     const newest = rows.reduce((m, t) => Math.max(m, parseInt(t.timestamp, 10) || 0), 0);
     console.log(`  Transactions: ${rows.length} rows (${data.transactionsSource}), newest ${newest ? new Date(newest * 1000).toISOString() : 'none'}`);
+  }
+
+  // The week so far, from MFL LIVE (Nov 2026): a column that runs after the
+  // week's first NFL games (the Saturday preview) starts from their points.
+  // Unavailable is not fatal — the column is then the plain pre-week preview.
+  if (mod.config.liveScoring) {
+    try {
+      data.liveScoring = await fetchLiveScoring(league, year, week);
+    } catch (err) {
+      console.warn(`  [warn] live MFL scoring unavailable (${err.message}); writing without the games already played.`);
+      data.liveScoring = null;
+    }
   }
 
   // Also load broadcast mappings if needed

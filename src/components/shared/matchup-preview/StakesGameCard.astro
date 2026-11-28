@@ -41,6 +41,10 @@ const b = m.b.franchiseId;
 // The NFL game that swings this one: most projected points across both
 // teams' starters, the Sunday Ticket board's question asked of one game.
 const keyGame = m.keyGame && m.keyGame.players.length > 0 ? m.keyGame : null;
+// The week so far (Nov 2026): the score when the preview was written, after
+// the week's early NFL games. Absent before the first kickoff.
+const live = m.live ?? null;
+const left = (n: number) => `${n} starter${n === 1 ? '' : 's'} left`;
 const nfl = (code: string) => normalizeTeamCode(code);
 // A defense's name is already "the Chicago Bears defense": no position prefix.
 const playerLabel = (p: { position: string; name: string }) =>
@@ -101,6 +105,35 @@ const ordinal = (n: number) => {
       call, 2026-11-16: the map is back on every game card). */}
   <MatchupMiniMap homeA={homeA} homeB={homeB} teamA={teamA} teamB={teamB} routeId={`${a}-${b}`} />
 
+  {live && (
+    <div class="sgc-sec sgc-sofar">
+      <h4>So far{live.through ? `, through ${live.through}` : ''}</h4>
+      <div class="sgc-sofar-score" role="img" aria-label={`Score so far: ${teamA.name} ${live.a.score.toFixed(1)}, ${teamB.name} ${live.b.score.toFixed(1)}`}>
+        <span class="sgc-lbl" style="color: var(--sgc-a)">{tag(teamA)}</span>
+        <b class="sgc-num" style="color: var(--sgc-a)">{live.a.score.toFixed(1)}</b>
+        <span class="sgc-sofar-dash">–</span>
+        <b class="sgc-num" style="color: var(--sgc-b)">{live.b.score.toFixed(1)}</b>
+        <span class="sgc-lbl" style="color: var(--sgc-b)">{tag(teamB)}</span>
+      </div>
+      <p class="sgc-swing">
+        {([[live.a, teamA], [live.b, teamB]] as const).map(([side, team], i) => (
+          <Fragment>{i > 0 && ' '}{team.short}: {left(side.left)}{side.projFinal != null && <Fragment>, projected <b>{Math.round(side.projFinal)}</b></Fragment>}.</Fragment>
+        ))}
+      </p>
+      {live.done.length > 0 && (
+        <ul class="sgc-keyp">
+          {live.done.map((p) => (
+            <li>
+              <span class="sgc-lbl" style={`color: ${p.franchiseId === a ? 'var(--sgc-a)' : 'var(--sgc-b)'}`}>{tag(p.franchiseId === a ? teamA : teamB)}</span>
+              <span class="sgc-keyname">{playerLabel(p)} <span class="sgc-keyteam">{nfl(p.nflTeam)} · final</span></span>
+              <span class="sgc-num">{p.score.toFixed(1)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )}
+
   {story.length > 0 && (
     <div class="sgc-story">
       {story.map((p) => <p>{p}</p>)}
@@ -109,7 +142,7 @@ const ordinal = (n: number) => {
 
   {keyGame && (
     <div class="sgc-sec sgc-key">
-      <h4>Key NFL game: {nfl(keyGame.away)} at {nfl(keyGame.home)}</h4>
+      <h4>Key NFL game{live ? ' still to play' : ''}: {nfl(keyGame.away)} at {nfl(keyGame.home)}</h4>
       <p class="sgc-swing"><b class="sgc-num">{keyGame.projTotal.toFixed(1)}</b> projected points from these two lineups.</p>
       <ul class="sgc-keyp">
         {keyGame.players.map((p) => (
