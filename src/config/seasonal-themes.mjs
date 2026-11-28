@@ -67,14 +67,14 @@ export const SEASONAL_THEMES = {
   },
   christmas: {
     id: 'christmas',
-    /** The palette — Candy Cane: a light sheet on a snowy frame. */
+    /** The palette — Evergreen & Gold: a pine header with a gold double rule. */
     theme: 'christmas',
     /**
-     * Light (owner's call, Oct 2026: the dark sheet read as black, then as
-     * dark green, neither of them a holiday look). The content is a light
-     * sheet (seasonal-themes.css) on the snow under the red header.
+     * Not locked (owner's call, Nov 2026: "keep a dark and light version").
+     * Light is an ivory page, dark a deep-pine one, under the same pine
+     * header. Oct 2026 had locked it light; that lock is lifted.
      */
-    lock: 'light',
+    lock: null,
     /** Franchise marks: each team knit into an ugly-sweater patch in its own colours. */
     marks: 'christmas-marks',
     /** What the welcome popup calls it. */
