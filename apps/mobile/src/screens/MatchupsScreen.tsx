@@ -7,7 +7,7 @@ import type { MflLiveAppLiveBoard, MflLiveAppLivePanel } from '@mfl/shared-types
 import type { MflLiveAppIdentityPanel } from '@mfl/shared-types/mfl-live-app-e';
 import { fetchBoard, SignedOutError } from '../api';
 import { ageLabel, feedLabel, holdPanels, isLive, nextPollMs, precisionOf } from '../format';
-import { font, useTheme, type Theme } from '../theme';
+import { font, useTheme, useThemeChoice, type Theme } from '../theme';
 import { MatchupCard } from '../components/MatchupCard';
 import { LeagueMark } from '../components/LeagueMark';
 
@@ -26,6 +26,8 @@ interface Props {
  */
 export function MatchupsScreen({ token, onSignOut }: Props) {
   const t = useTheme();
+  // A league theme puts that league's logo and name where the wordmark sits.
+  const themeLeague = useThemeChoice().league;
   const insets = useSafeAreaInsets();
   const [board, setBoard] = useState<MflLiveAppLiveBoard | null>(null);
   const [receivedAt, setReceivedAt] = useState(0);
@@ -109,9 +111,18 @@ export function MatchupsScreen({ token, onSignOut }: Props) {
   return (
     <View style={[styles.screen, { backgroundColor: t.ground, paddingTop: insets.top }]}>
       <View style={[styles.header, { borderBottomColor: t.border }]}>
-        <Text style={[styles.brand, { color: t.text }]}>
-          MFL <Text style={{ color: t.accentText }}>Football</Text>
-        </Text>
+        {themeLeague ? (
+          <View style={styles.brandRow}>
+            <LeagueMark logo={themeLeague.logo} name={themeLeague.name} size={30} />
+            <Text style={[styles.brand, styles.brandLeague, { color: t.text }]} numberOfLines={1}>
+              {themeLeague.name}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[styles.brand, { color: t.text }]}>
+            MFL <Text style={{ color: t.accentText }}>Football</Text>
+          </Text>
+        )}
         <Pressable accessibilityRole="button" onPress={onSignOut} hitSlop={12}>
           <Text style={[styles.signOut, { color: t.muted }]}>Sign out</Text>
         </Pressable>
@@ -258,6 +269,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   brand: { fontSize: 22, fontFamily: font.bold },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, marginRight: 12 },
+  brandLeague: { flexShrink: 1 },
   signOut: { fontFamily: font.regular, fontSize: 14 },
   content: { paddingHorizontal: 16, paddingTop: 12 },
   meta: { fontFamily: font.regular, fontSize: 13, marginBottom: 12 },

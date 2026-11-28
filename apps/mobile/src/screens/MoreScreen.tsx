@@ -5,7 +5,8 @@ import { useActiveTeam } from '../active-team';
 import { TeamSwitcher } from '../components/TeamSwitcher';
 import { useSession } from '../session-context';
 import { sendTestAlert } from '../push/notifications';
-import { font, useTheme } from '../theme';
+import { LeagueMark } from '../components/LeagueMark';
+import { font, MFL_THEME, useTheme, useThemeChoice } from '../theme';
 
 type Row = { label: string; hint?: string; onPress: () => void; disabled?: boolean };
 
@@ -19,6 +20,7 @@ export function MoreScreen() {
   const { token, signOut } = useSession();
   const [alertHint, setAlertHint] = useState('Send one to this phone');
   const { team } = useActiveTeam();
+  const themes = useThemeChoice();
   const leagueId = team?.leagueId;
 
   const leagueRows: Row[] = [
@@ -65,10 +67,46 @@ export function MoreScreen() {
     </View>
   );
 
+  // Only an owner in a league we run has a choice to make (plan decision 22).
+  const themeChoices = [
+    { key: MFL_THEME, name: 'MFL Football', logo: '' },
+    ...themes.options.map((o) => ({ key: o.slug, name: o.name, logo: o.logo })),
+  ];
+  const themeSection = themes.options.length ? (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: t.muted }]}>Theme</Text>
+      <View style={[styles.group, { backgroundColor: t.card, borderColor: t.border }]}>
+        {themeChoices.map((c, i) => {
+          const selected = c.key === themes.choice;
+          return (
+            <Pressable
+              key={c.key}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              onPress={() => themes.setChoice(c.key)}
+              style={[
+                styles.row,
+                styles.themeRow,
+                i > 0 && { borderTopColor: t.border, borderTopWidth: StyleSheet.hairlineWidth },
+              ]}
+            >
+              <View style={styles.themeMark}>
+                <LeagueMark logo={c.logo} name={c.name} size={24} />
+              </View>
+              <Text style={[styles.label, styles.themeName, { color: t.text }]}>{c.name}</Text>
+              <Text style={[styles.check, { color: t.accentText }]}>{selected ? '✓' : ''}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  ) : null;
+
   return (
     <ScrollView style={{ backgroundColor: t.ground }} contentContainerStyle={styles.content}>
       <TeamSwitcher />
       {section('This league', leagueRows)}
+      {themeSection}
       {section('MFL Football', appRows)}
       <Pressable accessibilityRole="button" onPress={signOut} hitSlop={12} style={styles.signOut}>
         <Text style={[styles.signOutText, { color: t.muted }]}>Sign out</Text>
@@ -85,6 +123,10 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 14, paddingHorizontal: 16 },
   label: { fontFamily: font.semibold, fontSize: 16 },
   hint: { fontFamily: font.regular, fontSize: 13, marginTop: 2 },
+  themeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  themeMark: { width: 24, height: 24 },
+  themeName: { flex: 1 },
+  check: { fontFamily: font.bold, fontSize: 18, width: 20, textAlign: 'right' },
   signOut: { alignSelf: 'center', marginTop: 20 },
   signOutText: { fontFamily: font.regular, fontSize: 14 },
 });
